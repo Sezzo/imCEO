@@ -1,0 +1,550 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core Organization
+model Company {
+  companyId          String    @id @default(uuid()) @map("company_id")
+  name               String
+  description        String?
+  industry           String?
+  primaryObjective   String?   @map("primary_objective")
+  operatingMode      String?   @map("operating_mode")
+  globalPrompt       String?   @map("global_prompt")
+  globalPolicies     Json?     @map("global_policies")
+  globalSkills       Json?     @map("global_skills")
+  globalMcps         Json?     @map("global_mcps")
+  globalPlugins      Json?     @map("global_plugins")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  divisions          Division[]
+  teams              Team[]
+  roleTemplates      RoleTemplate[]
+  agentProfiles      AgentProfile[]
+  workItems          WorkItem[]
+  artifacts          Artifact[]
+  policies           Policy[]
+
+  @@map("companies")
+}
+
+model Division {
+  divisionId        String    @id @default(uuid()) @map("division_id")
+  companyId         String    @map("company_id")
+  name              String
+  description       String?
+  parentDivisionId  String?   @map("parent_division_id")
+  headRoleId        String?   @map("head_role_id")
+  policies          Json?
+  defaultWorkflows  Json?     @map("default_workflows")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  company           Company   @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+  departments       Department[]
+  parentDivision    Division? @relation("DivisionHierarchy", fields: [parentDivisionId], references: [divisionId])
+  childDivisions    Division[] @relation("DivisionHierarchy")
+
+  @@map("divisions")
+}
+
+model Department {
+  departmentId      String    @id @default(uuid()) @map("department_id")
+  divisionId        String    @map("division_id")
+  name              String
+  description       String?
+  headRoleId        String?   @map("head_role_id")
+  scope             String?
+  policies          Json?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  division          Division  @relation(fields: [divisionId], references: [divisionId], onDelete: Cascade)
+  teams             Team[]
+
+  @@map("departments")
+}
+
+model Team {
+  teamId                String    @id @default(uuid()) @map("team_id")
+  departmentId          String    @map("department_id")
+  name                  String
+  description           String?
+  mission               String?
+  teamType              String?   @map("team_type")
+  leadRoleId            String?   @map("lead_role_id")
+  defaultModelProfileId String?   @map("default_model_profile_id")
+  defaultSkillBundleId  String?   @map("default_skill_bundle_id")
+  defaultMcpBundleId    String?   @map("default_mcp_bundle_id")
+  allowedInteractions   Json?     @map("allowed_interactions")
+  escalationChainId     String?   @map("escalation_chain_id")
+  costBudgetPolicyId    String?   @map("cost_budget_policy_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  department            Department @relation(fields: [departmentId], references: [departmentId], onDelete: Cascade)
+  agentProfiles         AgentProfile[]
+  workItems             WorkItem[]
+
+  @@map("teams")
+}
+
+// Roles & Agents
+enum HierarchyLevel {
+  CEO
+  Executive
+  Management
+  Lead
+  Specialist
+  Governance
+  Observer
+}
+
+model RoleTemplate {
+  roleTemplateId      String          @id @default(uuid()) @map("role_template_id")
+  companyId           String          @map("company_id")
+  name                String
+  hierarchyLevel      HierarchyLevel  @map("hierarchy_level")
+  description         String?
+  purpose             String?
+  primaryResponsibilities Json?       @map("primary_responsibilities")
+  nonResponsibilities Json?           @map("non_responsibilities")
+  decisionScope       Json?           @map("decision_scope")
+  escalationScope     Json?           @map("escalation_scope")
+  requiredArtifacts   Json?           @map("required_artifacts")
+  requiredReviews     Json?           @map("required_reviews")
+  defaultModelProfileId String?       @map("default_model_profile_id")
+  defaultSkillBundleId  String?       @map("default_skill_bundle_id")
+  costClass           String?         @map("cost_class")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+
+  company             Company         @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+  agentProfiles       AgentProfile[]
+
+  @@map("role_templates")
+}
+
+model AgentProfile {
+  agentId               String    @id @default(uuid()) @map("agent_id")
+  teamId                String    @map("team_id")
+  roleTemplateId        String?   @map("role_template_id")
+  displayName           String    @map("display_name")
+  internalName          String    @map("internal_name")
+  seniority             String?
+  status                String    @default("active")
+  customPromptOverride  String?   @map("custom_prompt_override")
+  maxParallelTasks      Int       @default(1) @map("max_parallel_tasks")
+  maxContextBudget      Int?      @map("max_context_budget")
+  maxCostPerTask        Decimal?  @map("max_cost_per_task") @db.Decimal(10, 2)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  team                  Team      @relation(fields: [teamId], references: [teamId], onDelete: Cascade)
+  roleTemplate          RoleTemplate? @relation(fields: [roleTemplateId], references: [roleTemplateId])
+  workItems             WorkItem[]
+
+  @@map("agent_profiles")
+}
+
+// Work Domain
+enum WorkItemType {
+  Vision
+  Goal
+  Initiative
+  Program
+  Workstream
+  Epic
+  Story
+  Task
+  Subtask
+  Bug
+  Spike
+  ReviewTask
+  TestTask
+  ReleaseTask
+}
+
+enum WorkItemState {
+  Draft
+  Proposed
+  Approved
+  Planned
+  Ready
+  InProgress
+  WaitingOnDependency
+  InReview
+  ChangesRequested
+  InTest
+  AwaitingApproval
+  ApprovedForCompletion
+  Done
+  Archived
+  Reopened
+  Rejected
+  Cancelled
+}
+
+model WorkItem {
+  workItemId        String        @id @default(uuid()) @map("work_item_id")
+  type              WorkItemType
+  title             String
+  description       String?
+  parentWorkItemId  String?       @map("parent_work_item_id")
+  companyId         String?       @map("company_id")
+  divisionId        String?       @map("division_id")
+  departmentId      String?       @map("department_id")
+  owningTeamId      String?       @map("owning_team_id")
+  owningRoleId      String?       @map("owning_role_id")
+  assignedAgentId   String?       @map("assigned_agent_id")
+  priority          String?
+  severity          String?
+  state             WorkItemState @default(Draft)
+  approvalState     String?       @map("approval_state")
+  riskScore         Int?          @map("risk_score")
+  costLimit         Decimal?      @map("cost_limit") @db.Decimal(10, 2)
+  estimatedEffort   Int?          @map("estimated_effort")
+  actualEffort      Int?          @map("actual_effort")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  startedAt         DateTime?     @map("started_at")
+  dueAt             DateTime?     @map("due_at")
+  completedAt       DateTime?     @map("completed_at")
+
+  company           Company?      @relation(fields: [companyId], references: [companyId])
+  team              Team?         @relation(fields: [owningTeamId], references: [teamId])
+  agent             AgentProfile? @relation(fields: [assignedAgentId], references: [agentId])
+  parentWorkItem    WorkItem?     @relation("WorkItemHierarchy", fields: [parentWorkItemId], references: [workItemId])
+  childWorkItems    WorkItem[]    @relation("WorkItemHierarchy")
+  artifacts         Artifact[]
+
+  @@map("work_items")
+}
+
+enum DelegationType {
+  research
+  planning
+  analysis
+  architecture
+  implementation
+  testing
+  review
+  documentation
+  compliance
+  release_preparation
+  incident_response
+  remediation
+}
+
+enum DelegationState {
+  pending
+  accepted
+  in_progress
+  completed
+  failed
+  cancelled
+}
+
+model Delegation {
+  delegationId          String          @id @default(uuid()) @map("delegation_id")
+  sourceWorkItemId      String          @map("source_work_item_id")
+  sourceAgentId         String?         @map("source_agent_id")
+  sourceRoleId          String?         @map("source_role_id")
+  targetTeamId          String          @map("target_team_id")
+  targetRoleId          String?         @map("target_role_id")
+  targetAgentId         String?         @map("target_agent_id")
+  delegationType        DelegationType  @map("delegation_type")
+  objective             String?
+  scope                 String?
+  constraints           Json?
+  state                 DelegationState @default(pending)
+  costLimit             Decimal?        @map("cost_limit") @db.Decimal(10, 2)
+  createdAt             DateTime        @default(now()) @map("created_at")
+  acceptedAt            DateTime?       @map("accepted_at")
+  completedAt           DateTime?       @map("completed_at")
+  failedAt              DateTime?       @map("failed_at")
+
+  @@map("delegations")
+}
+
+// Artifacts
+enum ArtifactType {
+  VisionBrief
+  StrategicMemo
+  GoalDefinition
+  ArchitectureProposal
+  ADR
+  SystemDesign
+  TechnicalSpec
+  APIContract
+  TaskBrief
+  TestPlan
+  TestReport
+  ReviewReport
+  DocumentationDraft
+  ReleaseNotes
+  SecurityReview
+  ComplianceReport
+}
+
+enum ArtifactStatus {
+  Draft
+  InPreparation
+  UnderReview
+  Approved
+  Superseded
+  Archived
+}
+
+model Artifact {
+  artifactId        String          @id @default(uuid()) @map("artifact_id")
+  type              ArtifactType
+  title             String
+  description       String?
+  status            ArtifactStatus  @default(Draft)
+  version           String          @default("1.0.0")
+  ownerTeamId       String?         @map("owner_team_id")
+  ownerAgentId      String?         @map("owner_agent_id")
+  sourceWorkItemId  String?         @map("source_work_item_id")
+  content           String?
+  contentHash       String?         @map("content_hash")
+  storageUri        String?         @map("storage_uri")
+  approvalState     String?         @map("approval_state")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  workItem          WorkItem?       @relation(fields: [sourceWorkItemId], references: [workItemId])
+  reviews           Review[]
+
+  @@map("artifacts")
+}
+
+enum ReviewType {
+  peer_review
+  lead_review
+  architecture_review
+  qa_review
+  security_review
+  compliance_review
+  executive_review
+}
+
+enum ReviewResult {
+  approved
+  approved_with_notes
+  changes_requested
+  rejected
+  escalated
+}
+
+model Review {
+  reviewId          String        @id @default(uuid()) @map("review_id")
+  reviewType        ReviewType    @map("review_type")
+  targetWorkItemId  String?       @map("target_work_item_id")
+  targetArtifactId  String?       @map("target_artifact_id")
+  reviewerRoleId    String?       @map("reviewer_role_id")
+  reviewerAgentId   String?       @map("reviewer_agent_id")
+  result            ReviewResult?
+  findings          String?
+  mandatoryFixes    Json?         @map("mandatory_fixes")
+  optionalNotes     String?       @map("optional_notes")
+  severity          String?
+  createdAt         DateTime      @default(now()) @map("created_at")
+  resolvedAt        DateTime?     @map("resolved_at")
+
+  artifact          Artifact?     @relation(fields: [targetArtifactId], references: [artifactId])
+
+  @@map("reviews")
+}
+
+// Governance
+enum PolicyType {
+  tool_policy
+  mcp_policy
+  plugin_policy
+  skill_policy
+  filesystem_policy
+  git_policy
+  review_policy
+  test_policy
+  release_policy
+  budget_policy
+  escalation_policy
+}
+
+enum PolicyAction {
+  allow
+  allow_with_warning
+  require_approval
+  block
+  quarantine
+  escalate
+}
+
+model Policy {
+  policyId            String      @id @default(uuid()) @map("policy_id")
+  name                String
+  description         String?
+  policyType          PolicyType  @map("policy_type")
+  scopeType           String      @map("scope_type")
+  scopeId             String      @map("scope_id")
+  conditionExpression String?     @map("condition_expression")
+  action              PolicyAction
+  severity            String?
+  approvalRequirement String?     @map("approval_requirement")
+  enabled             Boolean     @default(true)
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+
+  company             Company     @relation(fields: [scopeId], references: [companyId])
+
+  @@map("policies")
+}
+
+enum ApprovalRequestState {
+  pending
+  approved
+  rejected
+  escalated
+  expired
+}
+
+model ApprovalRequest {
+  approvalRequestId       String              @id @default(uuid()) @map("approval_request_id")
+  targetType              String              @map("target_type")
+  targetId                String              @map("target_id")
+  reason                  String?
+  requestedByRoleId       String              @map("requested_by_role_id")
+  requestedByAgentId    String?             @map("requested_by_agent_id")
+  requiredApproverRoleIds Json?             @map("required_approver_role_ids")
+  state                   ApprovalRequestState @default(pending)
+  expiresAt               DateTime?           @map("expires_at")
+  approvedAt              DateTime?           @map("approved_at")
+  rejectedAt              DateTime?           @map("rejected_at")
+  escalatedAt             DateTime?           @map("escalated_at")
+
+  @@map("approval_requests")
+}
+
+// Runtime
+enum TeamSessionState {
+  Queued
+  Launching
+  Active
+  Waiting
+  Idle
+  Failed
+  Completed
+  Terminated
+}
+
+enum AgentSessionState {
+  Assigned
+  Running
+  Waiting
+  Idle
+  Blocked
+  Failed
+  Completed
+  Killed
+}
+
+model TeamSession {
+  teamSessionId         String          @id @default(uuid()) @map("team_session_id")
+  teamId                String          @map("team_id")
+  initiatingWorkItemId  String?         @map("initiating_work_item_id")
+  sessionPurpose        String?         @map("session_purpose")
+  currentState          TeamSessionState @default(Queued)
+  currentCost           Decimal         @default(0) @map("current_cost") @db.Decimal(10, 2)
+  currentContextUsage   Int             @default(0) @map("current_context_usage")
+  launchedAt            DateTime?       @map("launched_at")
+  endedAt               DateTime?       @map("ended_at")
+
+  agentSessions         AgentSession[]
+
+  @@map("team_sessions")
+}
+
+model AgentSession {
+  agentSessionId      String          @id @default(uuid()) @map("agent_session_id")
+  teamSessionId       String          @map("team_session_id")
+  agentId             String          @map("agent_id")
+  assignedWorkItemId  String?         @map("assigned_work_item_id")
+  state               AgentSessionState @default(Assigned)
+  costAccumulated     Decimal         @default(0) @map("cost_accumulated") @db.Decimal(10, 2)
+  contextAccumulated  Int             @default(0) @map("context_accumulated")
+  startedAt           DateTime?       @map("started_at")
+  lastActiveAt        DateTime?       @map("last_active_at")
+  endedAt             DateTime?       @map("ended_at")
+  failureReason       String?         @map("failure_reason")
+
+  teamSession         TeamSession     @relation(fields: [teamSessionId], references: [teamSessionId])
+
+  @@map("agent_sessions")
+}
+
+// Observability
+enum AuditEventType {
+  company_created
+  company_updated
+  division_created
+  team_created
+  work_item_created
+  work_item_state_changed
+  work_item_completed
+  delegation_created
+  delegation_completed
+  decision_approved
+  approval_requested
+  policy_violation
+  cost_threshold_reached
+  agent_session_failed
+}
+
+enum AuditSeverity {
+  info
+  warning
+  critical
+}
+
+model AuditEvent {
+  auditEventId    String          @id @default(uuid()) @map("audit_event_id")
+  eventType       AuditEventType  @map("event_type")
+  actorRoleId     String?         @map("actor_role_id")
+  actorAgentId    String?         @map("actor_agent_id")
+  targetType      String          @map("target_type")
+  targetId        String          @map("target_id")
+  description     String?
+  payload         Json?
+  severity        AuditSeverity
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([eventType])
+  @@index([targetId])
+  @@map("audit_events")
+}
+
+model CostRecord {
+  costRecordId    String    @id @default(uuid()) @map("cost_record_id")
+  scopeType       String    @map("scope_type")
+  scopeId         String    @map("scope_id")
+  teamId          String?   @map("team_id")
+  agentId         String?   @map("agent_id")
+  modelProfileId  String?   @map("model_profile_id")
+  workItemId      String?   @map("work_item_id")
+  costType        String    @map("cost_type")
+  value           Decimal   @db.Decimal(10, 2)
+  unit            String    @default("USD")
+  details         Json?
+  recordedAt      DateTime  @default(now()) @map("recorded_at")
+
+  @@index([recordedAt])
+  @@index([scopeId])
+  @@map("cost_records")
+}
