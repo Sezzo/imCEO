@@ -154,9 +154,9 @@ export class WorkItemService {
       Approved: ['Planned', 'Rejected'],
       Planned: ['Ready', 'Cancelled'],
       Ready: ['InProgress', 'Cancelled'],
-      InProgress: ['WaitingOnDependency', 'InReview', 'Blocked', 'Cancelled'],
-      WaitingOnDependency: ['InProgress', 'Blocked'],
-      InReview: ['ChangesRequested', 'AwaitingApproval', 'Blocked'],
+      InProgress: ['WaitingOnDependency', 'InReview', 'ChangesRequested', 'Cancelled'],
+      WaitingOnDependency: ['InProgress', 'ChangesRequested'],
+      InReview: ['ChangesRequested', 'AwaitingApproval'],
       ChangesRequested: ['InProgress', 'InTest'],
       InTest: ['AwaitingApproval', 'ChangesRequested'],
       AwaitingApproval: ['ApprovedForCompletion', 'ChangesRequested', 'Rejected'],
@@ -166,7 +166,6 @@ export class WorkItemService {
       Reopened: ['InProgress'],
       Rejected: ['Reopened'],
       Cancelled: ['Reopened'],
-      Blocked: ['InProgress'],
     };
 
     return transitions[from]?.includes(to) ?? false;
@@ -342,7 +341,7 @@ export class WorkItemService {
           state: child.state,
           priority: child.priority,
           assignedAgent: child.agent
-            ? { id: child.agent.agentId, name: child.displayName }
+            ? { id: child.agent.agentId, name: child.agent.displayName }
             : null,
           owningTeam: child.team ? { id: child.team.teamId, name: child.team.name } : null,
           parentId: currentId,

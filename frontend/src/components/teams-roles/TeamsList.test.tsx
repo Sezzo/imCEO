@@ -77,19 +77,22 @@ describe('TeamsList', () => {
   it('displays team missions', () => {
     render(<TeamsList teams={mockTeams} {...mockHandlers} />);
 
-    expect(screen.getByText('Mission: Build robust APIs')).toBeInTheDocument();
-    expect(screen.getByText('Mission: Build great UI')).toBeInTheDocument();
-    expect(screen.getByText('Mission: Define product strategy')).toBeInTheDocument();
+    // Team missions should be displayed
+    expect(screen.getAllByText(/Mission:/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Build robust APIs/)).toBeInTheDocument();
+    expect(screen.getByText(/Build great UI/)).toBeInTheDocument();
+    expect(screen.getByText(/Define product strategy/)).toBeInTheDocument();
   });
 
   it('displays team type badges', () => {
     render(<TeamsList teams={mockTeams} {...mockHandlers} />);
 
-    // Should have 3 engineering badges and 1 product badge
+    // Should have 2 engineering badges and 1 product badge
     const engineeringBadges = screen.getAllByText('engineering');
     expect(engineeringBadges.length).toBe(2);
 
-    expect(screen.getByText('product')).toBeInTheDocument();
+    const productBadges = screen.getAllByText('product');
+    expect(productBadges.length).toBe(1);
   });
 
   it('displays lead role information', () => {

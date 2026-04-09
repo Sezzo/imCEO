@@ -1,5 +1,4 @@
 import { vi } from 'vitest';
-import { PrismaClient } from '@prisma/client';
 
 // Create mock for PrismaClient
 export const prismaMock = {
@@ -65,7 +64,7 @@ export const prismaMock = {
     findMany: vi.fn(),
   },
   $transaction: vi.fn(),
-} as unknown as PrismaClient;
+};
 
 // Mock the database module
 vi.mock('../config/database', () => ({
