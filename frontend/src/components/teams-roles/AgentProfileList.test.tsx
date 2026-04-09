@@ -108,11 +108,11 @@ describe('AgentProfileList', () => {
       />
     );
 
-    // Status labels
-    expect(screen.getByText('Aktiv')).toBeInTheDocument();
-    expect(screen.getByText('Beschäftigt')).toBeInTheDocument();
-    expect(screen.getByText('Bereit')).toBeInTheDocument();
-    expect(screen.getByText('Offline')).toBeInTheDocument();
+    // Status labels - use getAllByText because they appear in pills and badges
+    expect(screen.getAllByText('Aktiv').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Beschäftigt').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Bereit').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Offline').length).toBeGreaterThanOrEqual(1);
   });
 
   it('displays status counts', () => {
@@ -221,9 +221,9 @@ describe('AgentProfileList', () => {
       />
     );
 
-    // Status badges should be displayed
+    // Status badges should be displayed (appears in both overview and table)
     const activeBadges = screen.getAllByText('Aktiv');
-    expect(activeBadges.length).toBeGreaterThan(0);
+    expect(activeBadges.length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows activate button for offline/suspended agents', () => {
