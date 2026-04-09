@@ -1,5 +1,5 @@
 import { TeamService, CreateTeamDTO, UpdateTeamDTO } from '../../../src/application/services/team.service';
-import { prismaMock } from '../setup';
+import { prismaMock } from '../../setup';
 
 describe('TeamService', () => {
   const service = new TeamService();

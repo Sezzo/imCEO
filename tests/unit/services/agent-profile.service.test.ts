@@ -1,5 +1,5 @@
 import { AgentProfileService, CreateAgentProfileDTO, UpdateAgentProfileDTO } from '../../../src/application/services/agent-profile.service';
-import { prismaMock } from '../setup';
+import { prismaMock } from '../../setup';
 
 describe('AgentProfileService', () => {
   const service = new AgentProfileService();

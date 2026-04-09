@@ -1,5 +1,5 @@
 import { RoleTemplateService, CreateRoleTemplateDTO, UpdateRoleTemplateDTO } from '../../../src/application/services/role-template.service';
-import { prismaMock } from '../setup';
+import { prismaMock } from '../../setup';
 import { HierarchyLevel } from '@prisma/client';
 
 describe('RoleTemplateService', () => {

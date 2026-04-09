@@ -1,5 +1,5 @@
 import { WorkItemService, CreateWorkItemDTO, UpdateWorkItemDTO, WorkItemFilters } from '../../../src/application/services/work-item.service';
-import { prismaMock } from '../setup';
+import { prismaMock } from '../../setup';
 import { WorkItemState, WorkItemType } from '@prisma/client';
 import { vi } from 'vitest';
 

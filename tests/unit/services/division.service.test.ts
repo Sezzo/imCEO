@@ -1,5 +1,5 @@
 import { DivisionService, CreateDivisionDTO, UpdateDivisionDTO } from '../../../src/application/services/division.service';
-import { prismaMock } from '../setup';
+import { prismaMock } from '../../setup';
 
 describe('DivisionService', () => {
   const service = new DivisionService();

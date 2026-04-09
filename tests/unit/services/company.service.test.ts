@@ -1,5 +1,5 @@
 import { CompanyService, CreateCompanyDTO, UpdateCompanyDTO } from '../../../src/application/services/company.service';
-import { prismaMock } from '../setup';
+import { prismaMock } from '../../setup';
 
 describe('CompanyService', () => {
   const service = new CompanyService();

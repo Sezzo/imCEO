@@ -1,5 +1,5 @@
 import { DepartmentService, CreateDepartmentDTO, UpdateDepartmentDTO } from '../../../src/application/services/department.service';
-import { prismaMock } from '../setup';
+import { prismaMock } from '../../setup';
 
 describe('DepartmentService', () => {
   const service = new DepartmentService();
