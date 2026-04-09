@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ModelProfileEditor, type ModelProfile, type ModelProfileFormData } from '../../../src/components/model-profiles/ModelProfileEditor';
+import { ModelProfileEditor, type ModelProfile, type ModelProfileFormData } from '@/components/model-profiles/ModelProfileEditor';
 
 // Mock react-hook-form
 vi.mock('react-hook-form', () => ({

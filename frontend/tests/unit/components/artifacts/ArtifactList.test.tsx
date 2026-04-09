@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ArtifactList } from '../../../src/components/artifacts/ArtifactList';
+import { ArtifactList } from '@/components/artifacts/ArtifactList';
 
 // Mock modules
 const mockArtifactList = vi.fn();
 
-vi.mock('../../../src/api/client', () => ({
+vi.mock('@/api/client', () => ({
   artifactApi: {
     list: (...args: unknown[]) => mockArtifactList(...args),
   },
 }));
 
-vi.mock('../../../src/store/companyStore', () => ({
+vi.mock('@/store/companyStore', () => ({
   useCompanyStore: vi.fn(() => ({
     teams: [
       { teamId: 'team-1', name: 'Backend Team' },

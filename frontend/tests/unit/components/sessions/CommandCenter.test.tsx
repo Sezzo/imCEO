@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { CommandCenter, type SystemStatus, type CommandCenterProps } from '../../../src/components/sessions/CommandCenter';
+import { CommandCenter, type SystemStatus, type CommandCenterProps } from '@/components/sessions/CommandCenter';
 
 const mockMetrics = [
   { name: 'API Latency', value: 45, unit: 'ms', change: -5, status: 'good' as const },

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { TeamsList, type Team } from '../../../src/components/teams-roles/TeamsList';
+import { TeamsList, type Team } from '@/components/teams-roles/TeamsList';
 
 const mockTeams: Team[] = [
   {

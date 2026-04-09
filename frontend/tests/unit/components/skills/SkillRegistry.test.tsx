@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { SkillRegistry, type Skill, type SkillStatus, type SkillCategory } from '../../../src/components/skills/SkillRegistry';
+import { SkillRegistry, type Skill, type SkillStatus, type SkillCategory } from '@/components/skills/SkillRegistry';
 
 // Mock date-fns
 vi.mock('date-fns', () => ({

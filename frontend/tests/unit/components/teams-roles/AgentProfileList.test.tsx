@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AgentProfileList, type AgentProfile, type AgentStatus } from '../../../src/components/teams-roles/AgentProfileList';
+import { AgentProfileList, type AgentProfile, type AgentStatus } from '@/components/teams-roles/AgentProfileList';
 
 const mockAgents: AgentProfile[] = [
   {
