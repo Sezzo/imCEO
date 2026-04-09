@@ -92,4 +92,82 @@ export async function workItemRoutes(server: FastifyInstance) {
     const board = await workItemService.getBoard();
     return { data: board };
   });
+
+  // GET /api/v1/work-items/:id/hierarchy-tree
+  server.get('/work-items/:id/hierarchy-tree', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const tree = await workItemService.getHierarchyTree(id);
+    if (!tree) {
+      reply.status(404);
+      throw new Error('Work item not found');
+    }
+    return { data: tree };
+  });
+
+  // GET /api/v1/work-items/:id/ancestors
+  server.get('/work-items/:id/ancestors', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const ancestors = await workItemService.getAncestors(id);
+    return { data: ancestors };
+  });
+
+  // GET /api/v1/work-items/:id/descendants
+  server.get('/work-items/:id/descendants', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const descendants = await workItemService.getDescendants(id);
+    return { data: descendants };
+  });
+
+  // GET /api/v1/work-items/:id/siblings
+  server.get('/work-items/:id/siblings', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const siblings = await workItemService.getSiblings(id);
+    return { data: siblings };
+  });
+
+  // POST /api/v1/work-items/:id/move
+  server.post('/work-items/:id/move', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { newParentId } = request.body as { newParentId: string | null };
+    await workItemService.moveInHierarchy(id, newParentId);
+    reply.status(204);
+  });
+
+  // GET /api/v1/work-items/:id/impact-analysis
+  server.get('/work-items/:id/impact-analysis', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const analysis = await workItemService.getImpactAnalysis(id);
+    return { data: analysis };
+  });
+
+  // GET /api/v1/work-items/:id/rollup-progress
+  server.get('/work-items/:id/rollup-progress', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const progress = await workItemService.rollupProgress(id);
+    return { data: progress };
+  });
+
+  // GET /api/v1/work-items/:id/hierarchy-path
+  server.get('/work-items/:id/hierarchy-path', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const path = await workItemService.getHierarchyPath(id);
+    return { data: path };
+  });
+
+  // GET /api/v1/companies/:companyId/work-items/orphans
+  server.get('/companies/:companyId/work-items/orphans', async (request) => {
+    const { companyId } = request.params as { companyId: string };
+    const orphans = await workItemService.findOrphans(companyId);
+    return { data: orphans };
+  });
+
+  // POST /api/v1/work-items/bulk-update-parent
+  server.post('/work-items/bulk-update-parent', async (request, reply) => {
+    const { childIds, newParentId } = request.body as {
+      childIds: string[];
+      newParentId: string | null;
+    };
+    const updatedCount = await workItemService.bulkUpdateParent(childIds, newParentId);
+    return { data: { updatedCount } };
+  });
 }

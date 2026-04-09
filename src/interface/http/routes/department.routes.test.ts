@@ -7,6 +7,8 @@ import {
   createTestDivision,
   createTestDepartment,
   testPrisma,
+  checkDatabaseConnection,
+  isDatabaseAvailable,
 } from './test.setup';
 
 describe('Department Routes Integration Tests', () => {
@@ -16,16 +18,23 @@ describe('Department Routes Integration Tests', () => {
   let testDivision: any;
 
   beforeAll(async () => {
+    const dbAvailable = await checkDatabaseConnection();
+    if (!dbAvailable) {
+      console.warn('Skipping integration tests - database not available');
+      return;
+    }
     server = await buildTestServer();
     app = supertest(server.server);
   });
 
   afterAll(async () => {
+    if (!isDatabaseAvailable()) return;
     await server.close();
     await testPrisma.$disconnect();
   });
 
   beforeEach(async () => {
+    if (!isDatabaseAvailable()) return;
     await cleanDatabase();
     testCompany = await createTestCompany();
     testDivision = await createTestDivision(testCompany.companyId);

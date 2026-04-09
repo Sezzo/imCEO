@@ -22,6 +22,10 @@ import { policyRoutes } from './interface/http/routes/policy.routes';
 import { modelProfileRoutes } from './interface/http/routes/model-profile.routes';
 import { reportingLineRoutes } from './interface/http/routes/reporting-line.routes';
 import { escalationChainRoutes } from './interface/http/routes/escalation-chain.routes';
+import { auditEventRoutes } from './interface/http/routes/audit-event.routes';
+import { delegationRoutes } from './interface/http/routes/delegation.routes';
+import { reviewRoutes } from './interface/http/routes/review.routes';
+import { approvalRequestRoutes } from './interface/http/routes/approval-request.routes';
 import { healthRoutes } from './interface/http/routes/health.routes';
 import { sessionRoutes } from './interface/http/routes/sessions.routes';
 
@@ -78,6 +82,10 @@ async function buildServer() {
   await server.register(modelProfileRoutes, { prefix: '/api/v1' });
   await server.register(reportingLineRoutes, { prefix: '/api/v1' });
   await server.register(escalationChainRoutes, { prefix: '/api/v1' });
+  await server.register(auditEventRoutes, { prefix: '/api/v1' });
+  await server.register(delegationRoutes, { prefix: '/api/v1' });
+  await server.register(reviewRoutes, { prefix: '/api/v1' });
+  await server.register(approvalRequestRoutes, { prefix: '/api/v1' });
   await server.register(sessionRoutes, { prefix: '/api/v1' });
 
   // Error handler

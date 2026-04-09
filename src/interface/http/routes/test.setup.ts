@@ -29,6 +29,25 @@ export const testPrisma = new PrismaClient({
   log: ['error'],
 });
 
+// Check if database is available
+let databaseAvailable = false;
+export async function checkDatabaseConnection(): Promise<boolean> {
+  try {
+    await testPrisma.$connect();
+    await testPrisma.$queryRaw`SELECT 1`;
+    databaseAvailable = true;
+    return true;
+  } catch (error) {
+    databaseAvailable = false;
+    console.warn('Database not available, skipping integration tests');
+    return false;
+  }
+}
+
+export function isDatabaseAvailable(): boolean {
+  return databaseAvailable;
+}
+
 // Build test server
 export async function buildTestServer() {
   const server = Fastify({
@@ -87,25 +106,37 @@ export async function buildTestServer() {
 
 // Clean database helper
 export async function cleanDatabase() {
-  // Delete in reverse order of dependencies
-  await testPrisma.agentSession.deleteMany();
-  await testPrisma.teamSession.deleteMany();
-  await testPrisma.approvalRequest.deleteMany();
-  await testPrisma.review.deleteMany();
-  await testPrisma.artifact.deleteMany();
-  await testPrisma.workItemHistory.deleteMany();
-  await testPrisma.workItem.deleteMany();
-  await testPrisma.agentProfile.deleteMany();
-  await testPrisma.roleTemplate.deleteMany();
-  await testPrisma.team.deleteMany();
-  await testPrisma.department.deleteMany();
-  await testPrisma.division.deleteMany();
-  await testPrisma.policy.deleteMany();
-  await testPrisma.company.deleteMany();
+  if (!databaseAvailable) {
+    return;
+  }
+
+  try {
+    // Delete in reverse order of dependencies
+    await testPrisma.agentSession.deleteMany();
+    await testPrisma.teamSession.deleteMany();
+    await testPrisma.approvalRequest.deleteMany();
+    await testPrisma.review.deleteMany();
+    await testPrisma.artifact.deleteMany();
+    await testPrisma.workItemHistory.deleteMany();
+    await testPrisma.workItem.deleteMany();
+    await testPrisma.agentProfile.deleteMany();
+    await testPrisma.roleTemplate.deleteMany();
+    await testPrisma.team.deleteMany();
+    await testPrisma.department.deleteMany();
+    await testPrisma.division.deleteMany();
+    await testPrisma.policy.deleteMany();
+    await testPrisma.company.deleteMany();
+  } catch (error) {
+    console.warn('Failed to clean database:', error);
+  }
 }
 
 // Seed test data helpers
 export async function createTestCompany(data?: Partial<any>) {
+  if (!databaseAvailable) {
+    throw new Error('Database not available');
+  }
+
   return testPrisma.company.create({
     data: {
       name: 'Test Company',
@@ -117,6 +148,10 @@ export async function createTestCompany(data?: Partial<any>) {
 }
 
 export async function createTestDivision(companyId: string, data?: Partial<any>) {
+  if (!databaseAvailable) {
+    throw new Error('Database not available');
+  }
+
   return testPrisma.division.create({
     data: {
       companyId,
@@ -128,6 +163,10 @@ export async function createTestDivision(companyId: string, data?: Partial<any>)
 }
 
 export async function createTestDepartment(divisionId: string, data?: Partial<any>) {
+  if (!databaseAvailable) {
+    throw new Error('Database not available');
+  }
+
   return testPrisma.department.create({
     data: {
       divisionId,
@@ -139,6 +178,10 @@ export async function createTestDepartment(divisionId: string, data?: Partial<an
 }
 
 export async function createTestTeam(departmentId: string, data?: Partial<any>) {
+  if (!databaseAvailable) {
+    throw new Error('Database not available');
+  }
+
   return testPrisma.team.create({
     data: {
       departmentId,
@@ -150,6 +193,10 @@ export async function createTestTeam(departmentId: string, data?: Partial<any>) 
 }
 
 export async function createTestRoleTemplate(companyId: string, data?: Partial<any>) {
+  if (!databaseAvailable) {
+    throw new Error('Database not available');
+  }
+
   return testPrisma.roleTemplate.create({
     data: {
       companyId,
@@ -162,6 +209,10 @@ export async function createTestRoleTemplate(companyId: string, data?: Partial<a
 }
 
 export async function createTestAgentProfile(teamId: string, data?: Partial<any>) {
+  if (!databaseAvailable) {
+    throw new Error('Database not available');
+  }
+
   return testPrisma.agentProfile.create({
     data: {
       teamId,

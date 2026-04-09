@@ -5,6 +5,8 @@ import {
   cleanDatabase,
   createTestCompany,
   testPrisma,
+  checkDatabaseConnection,
+  isDatabaseAvailable,
 } from './test.setup';
 
 describe('Policy Routes Integration Tests', () => {
@@ -13,16 +15,23 @@ describe('Policy Routes Integration Tests', () => {
   let testCompany: any;
 
   beforeAll(async () => {
+    const dbAvailable = await checkDatabaseConnection();
+    if (!dbAvailable) {
+      console.warn('Skipping integration tests - database not available');
+      return;
+    }
     server = await buildTestServer();
     app = supertest(server.server);
   });
 
   afterAll(async () => {
+    if (!isDatabaseAvailable()) return;
     await server.close();
     await testPrisma.$disconnect();
   });
 
   beforeEach(async () => {
+    if (!isDatabaseAvailable()) return;
     await cleanDatabase();
     testCompany = await createTestCompany();
   });
