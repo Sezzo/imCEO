@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../database';
 
 // Set test environment variables BEFORE importing anything else
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/imceo_test?schema=public';
+process.env.DATABASE_URL = 'file:./test.db';
 process.env.JWT_SECRET = 'test-secret-key';
 process.env.LOG_LEVEL = 'error';
 
@@ -12,24 +12,24 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 
 // Import all routes
-import { healthRoutes } from './health.routes';
-import { companyRoutes } from './company.routes';
-import { divisionRoutes } from './division.routes';
-import { departmentRoutes } from './department.routes';
-import { teamRoutes } from './team.routes';
-import { roleTemplateRoutes } from './role-template.routes';
-import { agentProfileRoutes } from './agent-profile.routes';
-import { workItemRoutes } from './work-item.routes';
-import { artifactRoutes } from './artifact.routes';
-import { policyRoutes } from './policy.routes';
-import { sessionRoutes } from './sessions.routes';
+import { healthRoutes } from '../../src/interface/http/routes/health.routes';
+import { companyRoutes } from '../../src/interface/http/routes/company.routes';
+import { divisionRoutes } from '../../src/interface/http/routes/division.routes';
+import { departmentRoutes } from '../../src/interface/http/routes/department.routes';
+import { teamRoutes } from '../../src/interface/http/routes/team.routes';
+import { roleTemplateRoutes } from '../../src/interface/http/routes/role-template.routes';
+import { agentProfileRoutes } from '../../src/interface/http/routes/agent-profile.routes';
+import { workItemRoutes } from '../../src/interface/http/routes/work-item.routes';
+import { artifactRoutes } from '../../src/interface/http/routes/artifact.routes';
+import { policyRoutes } from '../../src/interface/http/routes/policy.routes';
+import { sessionRoutes } from '../../src/interface/http/routes/sessions.routes';
 
-// Create test Prisma client - uses DATABASE_URL from environment
+// Create test Prisma client - uses SQLite from environment
 export const testPrisma = new PrismaClient({
   log: ['error'],
 });
 
-// Check if database is available
+// Check if database is available (always true for SQLite)
 let databaseAvailable = false;
 export async function checkDatabaseConnection(): Promise<boolean> {
   try {

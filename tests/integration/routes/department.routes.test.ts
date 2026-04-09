@@ -9,7 +9,7 @@ import {
   testPrisma,
   checkDatabaseConnection,
   isDatabaseAvailable,
-} from './test.setup';
+} from '../test.setup';
 
 describe('Department Routes Integration Tests', () => {
   let server: any;
@@ -49,8 +49,8 @@ describe('Department Routes Integration Tests', () => {
     });
 
     it('should return list of departments', async () => {
-      await createTestDepartment(testDivision.divisionId, { name: 'Dept A' });
-      await createTestDepartment(testDivision.divisionId, { name: 'Dept B' });
+      await createTestDepartment(testDivision.divisionId, { name: 'Department A' });
+      await createTestDepartment(testDivision.divisionId, { name: 'Department B' });
 
       const res = await app.get('/api/v1/departments');
 
@@ -94,13 +94,13 @@ describe('Department Routes Integration Tests', () => {
 
   describe('GET /api/v1/departments/:id', () => {
     it('should return department by id', async () => {
-      const department = await createTestDepartment(testDivision.divisionId, { name: 'Test Dept' });
+      const department = await createTestDepartment(testDivision.divisionId, { name: 'Test Department' });
 
       const res = await app.get(`/api/v1/departments/${department.departmentId}`);
 
       expect(res.status).toBe(200);
       expect(res.body.data.departmentId).toBe(department.departmentId);
-      expect(res.body.data.name).toBe('Test Dept');
+      expect(res.body.data.name).toBe('Test Department');
     });
 
     it('should return 404 for non-existent department', async () => {
@@ -148,8 +148,8 @@ describe('Department Routes Integration Tests', () => {
 
   describe('GET /api/v1/divisions/:id/departments', () => {
     it('should return departments for a division', async () => {
-      await createTestDepartment(testDivision.divisionId, { name: 'Dept 1' });
-      await createTestDepartment(testDivision.divisionId, { name: 'Dept 2' });
+      await createTestDepartment(testDivision.divisionId, { name: 'Department 1' });
+      await createTestDepartment(testDivision.divisionId, { name: 'Department 2' });
 
       const res = await app.get(`/api/v1/divisions/${testDivision.divisionId}/departments`);
 

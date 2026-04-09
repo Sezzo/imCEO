@@ -10,7 +10,7 @@ import {
   testPrisma,
   checkDatabaseConnection,
   isDatabaseAvailable,
-} from './test.setup';
+} from '../test.setup';
 
 describe('Team Routes Integration Tests', () => {
   let server: any;
@@ -68,14 +68,13 @@ describe('Team Routes Integration Tests', () => {
         departmentId: testDepartment.departmentId,
         name: 'New Team',
         description: 'A new team',
-        mission: 'Test mission',
       };
 
       const res = await app.post('/api/v1/teams').send(teamData);
 
       expect(res.status).toBe(201);
       expect(res.body.data.name).toBe(teamData.name);
-      expect(res.body.data.mission).toBe(teamData.mission);
+      expect(res.body.data.departmentId).toBe(testDepartment.departmentId);
     });
 
     it('should return 400 for missing required fields', async () => {

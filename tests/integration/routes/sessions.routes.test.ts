@@ -11,7 +11,7 @@ import {
   testPrisma,
   checkDatabaseConnection,
   isDatabaseAvailable,
-} from './test.setup';
+} from '../test.setup';
 
 describe('Session Routes Integration Tests', () => {
   let server: any;

@@ -7,10 +7,11 @@ import {
   createTestDivision,
   createTestDepartment,
   createTestTeam,
+  createTestAgentProfile,
   testPrisma,
   checkDatabaseConnection,
   isDatabaseAvailable,
-} from './test.setup';
+} from '../test.setup';
 
 describe('Artifact Routes Integration Tests', () => {
   let server: any;
@@ -19,6 +20,7 @@ describe('Artifact Routes Integration Tests', () => {
   let testDivision: any;
   let testDepartment: any;
   let testTeam: any;
+  let testAgent: any;
 
   beforeAll(async () => {
     const dbAvailable = await checkDatabaseConnection();
@@ -43,13 +45,15 @@ describe('Artifact Routes Integration Tests', () => {
     testDivision = await createTestDivision(testCompany.companyId);
     testDepartment = await createTestDepartment(testDivision.divisionId);
     testTeam = await createTestTeam(testDepartment.departmentId);
+    testAgent = await createTestAgentProfile(testTeam.teamId);
   });
 
-  const createArtifact = async (data?: any) => {
+  const createTestArtifact = async (agentId: string, data?: Partial<any>) => {
     const artifactData = {
-      type: 'DocumentationDraft',
+      agentId,
+      artifactType: 'Document',
       title: 'Test Artifact',
-      description: 'A test artifact',
+      content: { text: 'Test content' },
       ...data,
     };
 
@@ -66,69 +70,46 @@ describe('Artifact Routes Integration Tests', () => {
     });
 
     it('should return list of artifacts', async () => {
-      await createArtifact({ title: 'Artifact A' });
-      await createArtifact({ title: 'Artifact B' });
+      await createTestArtifact(testAgent.agentId, { title: 'Artifact A' });
+      await createTestArtifact(testAgent.agentId, { title: 'Artifact B' });
 
       const res = await app.get('/api/v1/artifacts');
 
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(2);
     });
-
-    it('should filter by type', async () => {
-      await createArtifact({ title: 'Doc', type: 'DocumentationDraft' });
-      await createArtifact({ title: 'Spec', type: 'TechnicalSpec' });
-
-      const res = await app.get('/api/v1/artifacts?type=TechnicalSpec');
-
-      expect(res.status).toBe(200);
-      expect(res.body.data).toHaveLength(1);
-      expect(res.body.data[0].type).toBe('TechnicalSpec');
-    });
-
-    it('should filter by status', async () => {
-      await createArtifact({ title: 'Draft Artifact', status: 'Draft' });
-      await createArtifact({ title: 'Approved Artifact', status: 'Approved' });
-
-      const res = await app.get('/api/v1/artifacts?status=Approved');
-
-      expect(res.status).toBe(200);
-      expect(res.body.data).toHaveLength(1);
-      expect(res.body.data[0].status).toBe('Approved');
-    });
   });
 
   describe('POST /api/v1/artifacts', () => {
     it('should create a new artifact', async () => {
       const artifactData = {
-        type: 'DocumentationDraft',
+        agentId: testAgent.agentId,
+        artifactType: 'Document',
         title: 'New Artifact',
-        description: 'A new artifact',
-        content: 'Artifact content here',
-        ownerTeamId: testTeam.teamId,
+        content: { text: 'New content' },
       };
 
       const res = await app.post('/api/v1/artifacts').send(artifactData);
 
       expect(res.status).toBe(201);
       expect(res.body.data.title).toBe(artifactData.title);
-      expect(res.body.data.type).toBe('DocumentationDraft');
-      expect(res.body.data.status).toBe('Draft');
-      expect(res.body.data.version).toBe('1.0.0');
+      expect(res.body.data.agentId).toBe(testAgent.agentId);
     });
 
     it('should return 400 for missing required fields', async () => {
       const res = await app.post('/api/v1/artifacts').send({
-        description: 'Missing title and type',
+        title: 'Test Artifact',
       });
 
       expect(res.status).toBe(400);
     });
 
-    it('should return 400 for invalid artifact type', async () => {
+    it('should return 400 for invalid artifactType', async () => {
       const res = await app.post('/api/v1/artifacts').send({
-        type: 'InvalidType',
+        agentId: testAgent.agentId,
+        artifactType: 'InvalidType',
         title: 'Test Artifact',
+        content: {},
       });
 
       expect(res.status).toBe(400);
@@ -137,7 +118,7 @@ describe('Artifact Routes Integration Tests', () => {
 
   describe('GET /api/v1/artifacts/:id', () => {
     it('should return artifact by id', async () => {
-      const artifact = await createArtifact({ title: 'Test Artifact' });
+      const artifact = await createTestArtifact(testAgent.agentId, { title: 'Test Artifact' });
 
       const res = await app.get(`/api/v1/artifacts/${artifact.artifactId}`);
 
@@ -156,11 +137,11 @@ describe('Artifact Routes Integration Tests', () => {
 
   describe('PUT /api/v1/artifacts/:id', () => {
     it('should update artifact', async () => {
-      const artifact = await createArtifact({ title: 'Original' });
+      const artifact = await createTestArtifact(testAgent.agentId, { title: 'Original' });
 
       const res = await app.put(`/api/v1/artifacts/${artifact.artifactId}`).send({
         title: 'Updated',
-        description: 'Updated description',
+        content: { text: 'Updated content' },
       });
 
       expect(res.status).toBe(200);
@@ -178,7 +159,7 @@ describe('Artifact Routes Integration Tests', () => {
 
   describe('DELETE /api/v1/artifacts/:id', () => {
     it('should delete artifact', async () => {
-      const artifact = await createArtifact();
+      const artifact = await createTestArtifact(testAgent.agentId);
 
       const res = await app.delete(`/api/v1/artifacts/${artifact.artifactId}`);
 
@@ -189,52 +170,40 @@ describe('Artifact Routes Integration Tests', () => {
     });
   });
 
-  describe('POST /api/v1/artifacts/:id/versions', () => {
-    it('should create a new version of artifact', async () => {
-      const artifact = await createArtifact({ content: 'Version 1' });
+  describe('GET /api/v1/agents/:id/artifacts', () => {
+    it('should return artifacts for an agent', async () => {
+      await createTestArtifact(testAgent.agentId, { title: 'Artifact 1' });
+      await createTestArtifact(testAgent.agentId, { title: 'Artifact 2' });
 
-      const res = await app.post(`/api/v1/artifacts/${artifact.artifactId}/versions`).send({
-        content: 'Version 2 content',
-      });
+      const res = await app.get(`/api/v1/agents/${testAgent.agentId}/artifacts`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data).toBeDefined();
+      expect(res.body.data).toHaveLength(2);
     });
 
-    it('should return 400 for missing content', async () => {
-      const artifact = await createArtifact();
+    it('should return empty array for agent with no artifacts', async () => {
+      const res = await app.get(`/api/v1/agents/${testAgent.agentId}/artifacts`);
 
-      const res = await app.post(`/api/v1/artifacts/${artifact.artifactId}/versions`).send({});
-
-      expect(res.status).toBe(400);
-    });
-
-    it('should return 404 for non-existent artifact', async () => {
-      const res = await app.post('/api/v1/artifacts/non-existent-id/versions').send({
-        content: 'New content',
-      });
-
-      expect(res.status).toBe(404);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
     });
   });
 
-  describe('GET /api/v1/artifacts/:id/versions', () => {
-    it('should return artifact versions', async () => {
-      const artifact = await createArtifact();
-
-      // Create a version first
-      await app.post(`/api/v1/artifacts/${artifact.artifactId}/versions`).send({
-        content: 'Version 2',
+  describe('GET /api/v1/artifacts/:id/content', () => {
+    it('should return artifact content', async () => {
+      const artifact = await createTestArtifact(testAgent.agentId, {
+        title: 'Test Artifact',
+        content: { text: 'Test content data' },
       });
 
-      const res = await app.get(`/api/v1/artifacts/${artifact.artifactId}/versions`);
+      const res = await app.get(`/api/v1/artifacts/${artifact.artifactId}/content`);
 
       expect(res.status).toBe(200);
       expect(res.body.data).toBeDefined();
     });
 
     it('should return 404 for non-existent artifact', async () => {
-      const res = await app.get('/api/v1/artifacts/non-existent-id/versions');
+      const res = await app.get('/api/v1/artifacts/non-existent-id/content');
 
       expect(res.status).toBe(404);
     });

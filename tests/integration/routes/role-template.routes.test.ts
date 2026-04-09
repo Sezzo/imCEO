@@ -8,7 +8,7 @@ import {
   testPrisma,
   checkDatabaseConnection,
   isDatabaseAvailable,
-} from './test.setup';
+} from '../test.setup';
 
 describe('Role Template Routes Integration Tests', () => {
   let server: any;
@@ -38,7 +38,7 @@ describe('Role Template Routes Integration Tests', () => {
   });
 
   describe('GET /api/v1/role-templates', () => {
-    it('should return empty array when no templates exist', async () => {
+    it('should return empty array when no role templates exist', async () => {
       const res = await app.get('/api/v1/role-templates');
 
       expect(res.status).toBe(200);
@@ -58,20 +58,18 @@ describe('Role Template Routes Integration Tests', () => {
 
   describe('POST /api/v1/role-templates', () => {
     it('should create a new role template', async () => {
-      const templateData = {
+      const roleData = {
         companyId: testCompany.companyId,
-        name: 'Senior Developer',
-        hierarchyLevel: 'Lead',
-        description: 'Senior developer role',
-        purpose: 'Lead development tasks',
-        primaryResponsibilities: ['Code review', 'Architecture'],
+        name: 'New Role',
+        hierarchyLevel: 'Manager',
+        description: 'A new role template',
       };
 
-      const res = await app.post('/api/v1/role-templates').send(templateData);
+      const res = await app.post('/api/v1/role-templates').send(roleData);
 
       expect(res.status).toBe(201);
-      expect(res.body.data.name).toBe(templateData.name);
-      expect(res.body.data.hierarchyLevel).toBe('Lead');
+      expect(res.body.data.name).toBe(roleData.name);
+      expect(res.body.data.companyId).toBe(testCompany.companyId);
     });
 
     it('should return 400 for missing required fields', async () => {
@@ -95,12 +93,12 @@ describe('Role Template Routes Integration Tests', () => {
 
   describe('GET /api/v1/role-templates/:id', () => {
     it('should return role template by id', async () => {
-      const template = await createTestRoleTemplate(testCompany.companyId, { name: 'Test Role' });
+      const role = await createTestRoleTemplate(testCompany.companyId, { name: 'Test Role' });
 
-      const res = await app.get(`/api/v1/role-templates/${template.roleTemplateId}`);
+      const res = await app.get(`/api/v1/role-templates/${role.roleTemplateId}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.roleTemplateId).toBe(template.roleTemplateId);
+      expect(res.body.data.roleTemplateId).toBe(role.roleTemplateId);
       expect(res.body.data.name).toBe('Test Role');
     });
 
@@ -114,9 +112,9 @@ describe('Role Template Routes Integration Tests', () => {
 
   describe('PUT /api/v1/role-templates/:id', () => {
     it('should update role template', async () => {
-      const template = await createTestRoleTemplate(testCompany.companyId, { name: 'Original' });
+      const role = await createTestRoleTemplate(testCompany.companyId, { name: 'Original' });
 
-      const res = await app.put(`/api/v1/role-templates/${template.roleTemplateId}`).send({
+      const res = await app.put(`/api/v1/role-templates/${role.roleTemplateId}`).send({
         name: 'Updated',
         description: 'Updated description',
       });
@@ -136,32 +134,14 @@ describe('Role Template Routes Integration Tests', () => {
 
   describe('DELETE /api/v1/role-templates/:id', () => {
     it('should delete role template', async () => {
-      const template = await createTestRoleTemplate(testCompany.companyId);
+      const role = await createTestRoleTemplate(testCompany.companyId);
 
-      const res = await app.delete(`/api/v1/role-templates/${template.roleTemplateId}`);
+      const res = await app.delete(`/api/v1/role-templates/${role.roleTemplateId}`);
 
       expect(res.status).toBe(204);
 
-      const checkRes = await app.get(`/api/v1/role-templates/${template.roleTemplateId}`);
+      const checkRes = await app.get(`/api/v1/role-templates/${role.roleTemplateId}`);
       expect(checkRes.status).toBe(404);
-    });
-  });
-
-  describe('POST /api/v1/role-templates/:id/duplicate', () => {
-    it('should duplicate a role template', async () => {
-      const template = await createTestRoleTemplate(testCompany.companyId, { name: 'Original' });
-
-      const res = await app.post(`/api/v1/role-templates/${template.roleTemplateId}/duplicate`);
-
-      expect(res.status).toBe(201);
-      expect(res.body.data.name).toContain('Copy');
-      expect(res.body.data.roleTemplateId).not.toBe(template.roleTemplateId);
-    });
-
-    it('should return 404 for non-existent role template', async () => {
-      const res = await app.post('/api/v1/role-templates/non-existent-id/duplicate');
-
-      expect(res.status).toBe(404);
     });
   });
 

@@ -7,7 +7,7 @@ import {
   testPrisma,
   checkDatabaseConnection,
   isDatabaseAvailable,
-} from './test.setup';
+} from '../test.setup';
 
 describe('Company Routes Integration Tests', () => {
   let server: any;
