@@ -46,3 +46,6 @@ coverage/
 .cache/
 temp/
 tmp/
+
+# Claude scheduled tasks
+.claude/scheduled_tasks.lock
