@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { WorkItemBoard } from './WorkItemBoard';
+import { WorkItemBoard } from '../../../src/components/work-items/WorkItemBoard';
 
 // Mock modules before imports
 const mockGetBoard = vi.fn();
 const mockTransition = vi.fn();
 const mockSetWorkItems = vi.fn();
 
-vi.mock('../../api/client', () => ({
+vi.mock('../../../src/api/client', () => ({
   workItemApi: {
     getBoard: (...args: unknown[]) => mockGetBoard(...args),
     transition: (...args: unknown[]) => mockTransition(...args),
   },
 }));
 
-vi.mock('../../store/companyStore', () => ({
+vi.mock('../../../src/store/companyStore', () => ({
   useCompanyStore: vi.fn(() => ({
     workItems: [],
     setWorkItems: mockSetWorkItems,

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { RoleTemplateList, HIERARCHY_LEVELS, type RoleTemplate, type HierarchyLevel } from './RoleTemplateList';
+import { RoleTemplateList, HIERARCHY_LEVELS, type RoleTemplate, type HierarchyLevel } from '../../../src/components/teams-roles/RoleTemplateList';
 
 const mockRoles: RoleTemplate[] = [
   {
