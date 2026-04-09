@@ -1,5 +1,18 @@
+import { describe, it, expect, vi } from 'vitest';
 import { CompanyService, CreateCompanyDTO, UpdateCompanyDTO } from './company.service';
-import { prismaMock } from '../../test/singleton';
+import { prisma } from '../../config/database';
+
+vi.mock('../../config/database', () => ({
+  prisma: {
+    company: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+  },
+}));
 
 describe('CompanyService', () => {
   const service = new CompanyService();
@@ -23,18 +36,18 @@ describe('CompanyService', () => {
   describe('findAll', () => {
     it('should return all companies ordered by createdAt desc', async () => {
       const mockCompanies = [mockCompany, { ...mockCompany, companyId: 'company-456' }];
-      prismaMock.company.findMany.mockResolvedValue(mockCompanies);
+      vi.mocked(prisma.company.findMany).mockResolvedValue(mockCompanies);
 
       const result = await service.findAll();
 
       expect(result).toEqual(mockCompanies);
-      expect(prismaMock.company.findMany).toHaveBeenCalledWith({
+      expect(prisma.company.findMany).toHaveBeenCalledWith({
         orderBy: { createdAt: 'desc' },
       });
     });
 
     it('should return empty array when no companies exist', async () => {
-      prismaMock.company.findMany.mockResolvedValue([]);
+      vi.mocked(prisma.company.findMany).mockResolvedValue([]);
 
       const result = await service.findAll();
 

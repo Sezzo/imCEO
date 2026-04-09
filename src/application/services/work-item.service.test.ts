@@ -380,8 +380,11 @@ describe('WorkItemService', () => {
 
       for (const targetState of validTargets) {
         prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, state: WorkItemState.InProgress });
-        prismaMock.$transaction.mockImplementation(async (operations: any[]) => {
-          return operations[0];
+        prismaMock.$transaction.mockImplementation(async (operations: any) => {
+          if (Array.isArray(operations)) {
+            return operations;
+          }
+          return operations;
         });
         prismaMock.workItem.update.mockResolvedValue({
           ...mockWorkItem,
@@ -395,8 +398,11 @@ describe('WorkItemService', () => {
 
     it('should create history entry during transition', async () => {
       prismaMock.workItem.findUnique.mockResolvedValue(mockWorkItem);
-      prismaMock.$transaction.mockImplementation(async (operations: any[]) => {
-        return operations[0];
+      prismaMock.$transaction.mockImplementation(async (operations: any) => {
+        if (Array.isArray(operations)) {
+          return operations;
+        }
+        return operations;
       });
       prismaMock.workItem.update.mockResolvedValue({
         ...mockWorkItem,
