@@ -1,5 +1,5 @@
-import { ArtifactService, CreateArtifactDTO, UpdateArtifactDTO, ArtifactFilters } from './artifact.service';
-import { prismaMock } from '../../test/singleton';
+import { ArtifactService, CreateArtifactDTO, UpdateArtifactDTO, ArtifactFilters } from '../../../src/application/services/artifact.service';
+import { prismaMock } from '../setup';
 import { ArtifactType, ArtifactStatus } from '@prisma/client';
 
 describe('ArtifactService', () => {
