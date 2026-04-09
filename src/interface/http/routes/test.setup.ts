@@ -1,7 +1,15 @@
+import { PrismaClient } from '@prisma/client';
+
+// Set test environment variables BEFORE importing anything else
+process.env.NODE_ENV = 'test';
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/imceo_test?schema=public';
+process.env.JWT_SECRET = 'test-secret-key';
+process.env.LOG_LEVEL = 'error';
+
+// Now import Fastify and routes
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
-import { PrismaClient } from '@prisma/client';
 
 // Import all routes
 import { healthRoutes } from './health.routes';
@@ -16,16 +24,9 @@ import { artifactRoutes } from './artifact.routes';
 import { policyRoutes } from './policy.routes';
 import { sessionRoutes } from './sessions.routes';
 
-// Test database URL
-const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || 'file:./test.db';
-
-// Create test Prisma client
+// Create test Prisma client - uses DATABASE_URL from environment
 export const testPrisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: TEST_DATABASE_URL,
-    },
-  },
+  log: ['error'],
 });
 
 // Build test server
