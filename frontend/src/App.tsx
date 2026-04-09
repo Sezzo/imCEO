@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Building2, Plus, Save, Trash2, X, ChevronRight, ChevronDown } from 'lucide-react';
+import { Building2, Plus, Save, Trash2, X, ChevronRight, ChevronDown, Briefcase, Users } from 'lucide-react';
 import { OrgChartCanvas } from './components/company-designer/OrgChartCanvas';
 import { useCompanyStore } from './store/companyStore';
-import { companyApi, divisionApi, type Company, type Division } from './api/client';
+import {
+  companyApi,
+  divisionApi,
+  departmentApi,
+  teamApi,
+  type Company,
+  type Division,
+  type Department,
+  type Team,
+} from './api/client';
 
 function App() {
   // Company creation form state
@@ -15,21 +24,48 @@ function App() {
   const [divisionName, setDivisionName] = useState('');
   const [divisionDescription, setDivisionDescription] = useState('');
   const [showDivisionForm, setShowDivisionForm] = useState(false);
+  const [divisionFormParentId, setDivisionFormParentId] = useState<string | null>(null);
+
+  // Department creation form state
+  const [departmentName, setDepartmentName] = useState('');
+  const [departmentDescription, setDepartmentDescription] = useState('');
+  const [showDepartmentForm, setShowDepartmentForm] = useState(false);
+  const [departmentFormDivisionId, setDepartmentFormDivisionId] = useState<string | null>(null);
+
+  // Team creation form state
+  const [teamName, setTeamName] = useState('');
+  const [teamDescription, setTeamDescription] = useState('');
+  const [teamMission, setTeamMission] = useState('');
+  const [showTeamForm, setShowTeamForm] = useState(false);
+  const [teamFormDepartmentId, setTeamFormDepartmentId] = useState<string | null>(null);
 
   // UI state
   const [expandedDivisions, setExpandedDivisions] = useState<Set<string>>(new Set());
+  const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(new Set());
 
   const {
     currentCompany,
     divisions,
+    departments,
+    teams,
     selectedDivisionId,
+    selectedDepartmentId,
+    selectedTeamId,
     isLoading,
     error,
     setCompany,
     setDivisions,
+    setDepartments,
+    setTeams,
     addDivision,
+    addDepartment,
+    addTeam,
     removeDivision,
+    removeDepartment,
+    removeTeam,
     setSelectedDivision,
+    setSelectedDepartment,
+    setSelectedTeam,
     setLoading,
     setError,
   } = useCompanyStore();
@@ -67,10 +103,12 @@ function App() {
         companyId: currentCompany.companyId,
         name: divisionName,
         description: divisionDescription,
+        parentDivisionId: divisionFormParentId || undefined,
       });
       addDivision(response.data.data);
       setDivisionName('');
       setDivisionDescription('');
+      setDivisionFormParentId(null);
       setShowDivisionForm(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create division');
@@ -79,9 +117,67 @@ function App() {
     }
   };
 
-  // Delete division
+  // Create department
+  const handleCreateDepartment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!departmentFormDivisionId || !departmentName.trim()) return;
+
+    setIsSaving(true);
+    try {
+      const response = await departmentApi.create({
+        divisionId: departmentFormDivisionId,
+        name: departmentName,
+        description: departmentDescription,
+      });
+      addDepartment(response.data.data);
+      setDepartmentName('');
+      setDepartmentDescription('');
+      setDepartmentFormDivisionId(null);
+      setShowDepartmentForm(false);
+      // Expand the division to show the new department
+      setExpandedDivisions((prev) => new Set(prev).add(departmentFormDivisionId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create department');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Create team
+  const handleCreateTeam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teamFormDepartmentId || !teamName.trim()) return;
+
+    setIsSaving(true);
+    try {
+      const response = await teamApi.create({
+        departmentId: teamFormDepartmentId,
+        name: teamName,
+        description: teamDescription,
+        mission: teamMission,
+      });
+      addTeam(response.data.data);
+      setTeamName('');
+      setTeamDescription('');
+      setTeamMission('');
+      setTeamFormDepartmentId(null);
+      setShowTeamForm(false);
+      // Find parent division and expand it
+      const dept = departments.find(d => d.departmentId === teamFormDepartmentId);
+      if (dept) {
+        setExpandedDivisions((prev) => new Set(prev).add(dept.divisionId));
+        setExpandedDepartments((prev) => new Set(prev).add(teamFormDepartmentId));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create team');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Delete handlers
   const handleDeleteDivision = async (divisionId: string) => {
-    if (!confirm('Are you sure you want to delete this division?')) return;
+    if (!confirm('Are you sure you want to delete this division? All departments and teams within it will also be deleted.')) return;
 
     try {
       await divisionApi.delete(divisionId);
@@ -91,7 +187,29 @@ function App() {
     }
   };
 
-  // Toggle division expansion
+  const handleDeleteDepartment = async (departmentId: string) => {
+    if (!confirm('Are you sure you want to delete this department? All teams within it will also be deleted.')) return;
+
+    try {
+      await departmentApi.delete(departmentId);
+      removeDepartment(departmentId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete department');
+    }
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    if (!confirm('Are you sure you want to delete this team?')) return;
+
+    try {
+      await teamApi.delete(teamId);
+      removeTeam(teamId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete team');
+    }
+  };
+
+  // Toggle expansion
   const toggleDivision = (divisionId: string) => {
     setExpandedDivisions((prev) => {
       const next = new Set(prev);
@@ -104,32 +222,62 @@ function App() {
     });
   };
 
-  // Load existing companies on mount
+  const toggleDepartment = (departmentId: string) => {
+    setExpandedDepartments((prev) => {
+      const next = new Set(prev);
+      if (next.has(departmentId)) {
+        next.delete(departmentId);
+      } else {
+        next.add(departmentId);
+      }
+      return next;
+    });
+  };
+
+  // Load data on mount
   useEffect(() => {
-    const loadCompanies = async () => {
+    const loadData = async () => {
+      setLoading(true);
       try {
-        const response = await companyApi.list();
-        if (response.data.data.length > 0) {
-          // Load the first company for now
-          const company = response.data.data[0];
+        const companiesResponse = await companyApi.list();
+        if (companiesResponse.data.data.length > 0) {
+          const company = companiesResponse.data.data[0];
           setCompany(company);
 
-          // Load divisions for this company
-          const divisionsResponse = await divisionApi.listByCompany(company.companyId);
-          setDivisions(divisionsResponse.data.data);
+          // Load all related data
+          const [divisionsRes, departmentsRes, teamsRes] = await Promise.all([
+            divisionApi.listByCompany(company.companyId),
+            departmentApi.list(),
+            teamApi.list(),
+          ]);
+
+          setDivisions(divisionsRes.data.data);
+          setDepartments(departmentsRes.data.data);
+          setTeams(teamsRes.data.data);
         }
       } catch (err) {
-        console.error('Failed to load companies:', err);
+        console.error('Failed to load data:', err);
+        setError('Failed to load initial data');
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadCompanies();
-  }, [setCompany, setDivisions]);
+    loadData();
+  }, [setCompany, setDivisions, setDepartments, setTeams, setLoading, setError]);
+
+  // Helper to get departments for a division
+  const getDepartmentsForDivision = (divisionId: string) =>
+    departments.filter((d) => d.divisionId === divisionId);
+
+  // Helper to get teams for a department
+  const getTeamsForDepartment = (departmentId: string) =>
+    teams.filter((t) => t.departmentId === departmentId);
 
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-80 bg-white border-r border-gray-200 flex flex-col">
+      <aside className="w-96 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-4 border-b border-gray-200">
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <Building2 className="w-6 h-6 text-purple-600" />
@@ -157,13 +305,8 @@ function App() {
               <div className="p-3 bg-white rounded border border-gray-200">
                 <h3 className="font-medium text-gray-900">{currentCompany.name}</h3>
                 {currentCompany.description && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    {currentCompany.description}
-                  </p>
+                  <p className="text-sm text-gray-500 mt-1">{currentCompany.description}</p>
                 )}
-                <div className="mt-2 text-xs text-gray-400">
-                  ID: {currentCompany.companyId.slice(0, 8)}...
-                </div>
               </div>
             ) : showCompanyForm ? (
               <form onSubmit={handleCreateCompany} className="space-y-2">
@@ -204,21 +347,26 @@ function App() {
             )}
           </div>
 
-          {/* Divisions Section */}
+          {/* Organization Hierarchy */}
           {currentCompany && (
             <div className="bg-gray-50 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="font-semibold text-gray-900">Divisions ({divisions.length})</h2>
+                <h2 className="font-semibold text-gray-900">Organization</h2>
                 <button
-                  onClick={() => setShowDivisionForm(true)}
+                  onClick={() => {
+                    setDivisionFormParentId(null);
+                    setShowDivisionForm(true);
+                  }}
                   className="p-1 hover:bg-gray-200 rounded"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
 
+              {/* Division Form */}
               {showDivisionForm && (
                 <form onSubmit={handleCreateDivision} className="space-y-2 mb-3 p-2 bg-white rounded border border-gray-200">
+                  <div className="text-xs text-gray-500 font-medium">New Division</div>
                   <input
                     type="text"
                     placeholder="Division name"
@@ -245,7 +393,10 @@ function App() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowDivisionForm(false)}
+                      onClick={() => {
+                        setShowDivisionForm(false);
+                        setDivisionFormParentId(null);
+                      }}
                       className="px-2 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
                     >
                       <X className="w-3 h-3" />
@@ -254,62 +405,271 @@ function App() {
                 </form>
               )}
 
+              {/* Hierarchy Tree */}
               <div className="space-y-1">
                 {divisions.length === 0 ? (
-                  <p className="text-sm text-gray-400">No divisions defined yet</p>
+                  <p className="text-sm text-gray-400">No divisions yet. Add one to start.</p>
                 ) : (
-                  divisions.map((division) => (
-                    <div key={division.divisionId}>
-                      <div
-                        onClick={() => {
-                          toggleDivision(division.divisionId);
-                          setSelectedDivision(division.divisionId);
-                        }}
-                        className={`
-                          flex items-center justify-between p-2 rounded cursor-pointer text-sm
-                          ${selectedDivisionId === division.divisionId
-                            ? 'bg-purple-100 border border-purple-300'
-                            : 'bg-white border border-gray-200 hover:border-purple-300'
-                          }
-                        `}
-                      >
-                        <div className="flex items-center gap-1 min-w-0">
-                          {expandedDivisions.has(division.divisionId) ? (
-                            <ChevronDown className="w-3 h-3 text-gray-500 shrink-0" />
-                          ) : (
-                            <ChevronRight className="w-3 h-3 text-gray-500 shrink-0" />
-                          )}
-                          <span className="font-medium truncate">{division.name}</span>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteDivision(division.divisionId);
-                          }}
-                          className="p-1 hover:bg-red-100 hover:text-red-600 rounded shrink-0"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
+                  divisions.map((division) => {
+                    const divisionDepts = getDepartmentsForDivision(division.divisionId);
+                    const isExpanded = expandedDivisions.has(division.divisionId);
 
-                      {/* Placeholder for departments - will be expanded later */}
-                      {expandedDivisions.has(division.divisionId) && (
-                        <div className="ml-4 mt-1 space-y-1">
-                          <div className="p-2 text-sm text-gray-400 italic">
-                            Departments will appear here...
+                    return (
+                      <div key={division.divisionId} className="space-y-1">
+                        {/* Division Row */}
+                        <div
+                          onClick={() => {
+                            toggleDivision(division.divisionId);
+                            setSelectedDivision(division.divisionId);
+                          }}
+                          className={`
+                            flex items-center justify-between p-2 rounded cursor-pointer text-sm
+                            ${selectedDivisionId === division.divisionId
+                              ? 'bg-purple-100 border border-purple-300'
+                              : 'bg-white border border-gray-200 hover:border-purple-300'
+                            }
+                          `}
+                        >
+                          <div className="flex items-center gap-1 min-w-0">
+                            {divisionDepts.length > 0 ? (
+                              isExpanded ? (
+                                <ChevronDown className="w-3 h-3 text-gray-500 shrink-0" />
+                              ) : (
+                                <ChevronRight className="w-3 h-3 text-gray-500 shrink-0" />
+                              )
+                            ) : (
+                              <span className="w-3 shrink-0" />
+                            )}
+                            <span className="font-medium truncate">{division.name}</span>
                           </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDivision(division.divisionId);
+                            }}
+                            className="p-1 hover:bg-red-100 hover:text-red-600 rounded shrink-0"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
                         </div>
-                      )}
-                    </div>
-                  ))
+
+                        {/* Departments under Division */}
+                        {isExpanded && (
+                          <div className="ml-4 space-y-1">
+                            {/* Add Department Button */}
+                            {showDepartmentForm && departmentFormDivisionId === division.divisionId ? (
+                              <form onSubmit={handleCreateDepartment} className="space-y-2 p-2 bg-blue-50 rounded border border-blue-200">
+                                <input
+                                  type="text"
+                                  placeholder="Department name"
+                                  value={departmentName}
+                                  onChange={(e) => setDepartmentName(e.target.value)}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  autoFocus
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Description (optional)"
+                                  value={departmentDescription}
+                                  onChange={(e) => setDepartmentDescription(e.target.value)}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <div className="flex gap-2">
+                                  <button
+                                    type="submit"
+                                    disabled={isSaving}
+                                    className="flex-1 px-2 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
+                                  >
+                                    <Plus className="w-3 h-3 inline mr-1" />
+                                    Add
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setShowDepartmentForm(false);
+                                      setDepartmentFormDivisionId(null);
+                                    }}
+                                    className="px-2 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </form>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setDepartmentFormDivisionId(division.divisionId);
+                                  setShowDepartmentForm(true);
+                                }}
+                                className="w-full flex items-center gap-1 p-1.5 text-xs text-blue-600 hover:bg-blue-100 rounded"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Add Department
+                              </button>
+                            )}
+
+                            {/* Departments List */}
+                            {divisionDepts.map((dept) => {
+                              const deptTeams = getTeamsForDepartment(dept.departmentId);
+                              const isDeptExpanded = expandedDepartments.has(dept.departmentId);
+
+                              return (
+                                <div key={dept.departmentId}>
+                                  {/* Department Row */}
+                                  <div
+                                    onClick={() => {
+                                      toggleDepartment(dept.departmentId);
+                                      setSelectedDepartment(dept.departmentId);
+                                    }}
+                                    className={`
+                                      flex items-center justify-between p-2 rounded cursor-pointer text-sm
+                                      ${selectedDepartmentId === dept.departmentId
+                                        ? 'bg-blue-100 border border-blue-300'
+                                        : 'bg-white border border-gray-200 hover:border-blue-300'
+                                      }
+                                    `}
+                                  >
+                                    <div className="flex items-center gap-1 min-w-0">
+                                      {deptTeams.length > 0 ? (
+                                        isDeptExpanded ? (
+                                          <ChevronDown className="w-3 h-3 text-gray-500 shrink-0" />
+                                        ) : (
+                                          <ChevronRight className="w-3 h-3 text-gray-500 shrink-0" />
+                                        )
+                                      ) : (
+                                        <span className="w-3 shrink-0" />
+                                      )}
+                                      <Briefcase className="w-3 h-3 text-blue-500 shrink-0" />
+                                      <span className="truncate">{dept.name}</span>
+                                    </div>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteDepartment(dept.departmentId);
+                                      }}
+                                      className="p-1 hover:bg-red-100 hover:text-red-600 rounded shrink-0"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+
+                                  {/* Teams under Department */}
+                                  {isDeptExpanded && (
+                                    <div className="ml-4 space-y-1">
+                                      {/* Add Team Button */}
+                                      {showTeamForm && teamFormDepartmentId === dept.departmentId ? (
+                                        <form onSubmit={handleCreateTeam} className="space-y-2 p-2 bg-amber-50 rounded border border-amber-200">
+                                          <input
+                                            type="text"
+                                            placeholder="Team name"
+                                            value={teamName}
+                                            onChange={(e) => setTeamName(e.target.value)}
+                                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                            autoFocus
+                                          />
+                                          <input
+                                            type="text"
+                                            placeholder="Description (optional)"
+                                            value={teamDescription}
+                                            onChange={(e) => setTeamDescription(e.target.value)}
+                                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                          />
+                                          <input
+                                            type="text"
+                                            placeholder="Mission (optional)"
+                                            value={teamMission}
+                                            onChange={(e) => setTeamMission(e.target.value)}
+                                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                          />
+                                          <div className="flex gap-2">
+                                            <button
+                                              type="submit"
+                                              disabled={isSaving}
+                                              className="flex-1 px-2 py-1.5 bg-amber-600 text-white text-sm rounded hover:bg-amber-700 disabled:opacity-50"
+                                            >
+                                              <Plus className="w-3 h-3 inline mr-1" />
+                                              Add
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setShowTeamForm(false);
+                                                setTeamFormDepartmentId(null);
+                                              }}
+                                              className="px-2 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
+                                            >
+                                              <X className="w-3 h-3" />
+                                            </button>
+                                          </div>
+                                        </form>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            setTeamFormDepartmentId(dept.departmentId);
+                                            setShowTeamForm(true);
+                                          }}
+                                          className="w-full flex items-center gap-1 p-1.5 text-xs text-amber-600 hover:bg-amber-100 rounded"
+                                        >
+                                          <Plus className="w-3 h-3" />
+                                          Add Team
+                                        </button>
+                                      )}
+
+                                      {/* Teams List */}
+                                      {deptTeams.map((team) => (
+                                        <div
+                                          key={team.teamId}
+                                          onClick={() => setSelectedTeam(team.teamId)}
+                                          className={`
+                                            flex items-center justify-between p-2 rounded cursor-pointer text-sm
+                                            ${selectedTeamId === team.teamId
+                                              ? 'bg-amber-100 border border-amber-300'
+                                              : 'bg-white border border-gray-200 hover:border-amber-300'
+                                            }
+                                          `}
+                                        >
+                                          <div className="flex items-center gap-1 min-w-0">
+                                            <Users className="w-3 h-3 text-amber-500 shrink-0" />
+                                            <span className="truncate">{team.name}</span>
+                                          </div>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteTeam(team.teamId);
+                                            }}
+                                            className="p-1 hover:bg-red-100 hover:text-red-600 rounded shrink-0"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
           )}
 
+          {/* Error Display */}
           {error && (
             <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm">
               {error}
+            </div>
+          )}
+
+          {/* Loading Indicator */}
+          {isLoading && (
+            <div className="text-center py-4">
+              <div className="animate-spin w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full mx-auto" />
+              <p className="text-sm text-gray-500 mt-2">Loading...</p>
             </div>
           )}
         </div>
