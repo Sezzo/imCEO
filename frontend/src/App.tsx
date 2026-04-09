@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Building2, Plus, Save, Trash2, X, ChevronRight, ChevronDown, Briefcase, Users } from 'lucide-react';
+import { Building2, Plus, Save, Trash2, X, ChevronRight, ChevronDown, Briefcase, Users, Layout, Kanban } from 'lucide-react';
 import { OrgChartCanvas } from './components/company-designer/OrgChartCanvas';
+import { WorkItemBoard } from './components/work-items/WorkItemBoard';
 import { useCompanyStore } from './store/companyStore';
 import {
   companyApi,
@@ -13,7 +14,12 @@ import {
   type Team,
 } from './api/client';
 
+type View = 'company-designer' | 'work-items';
+
 function App() {
+  // Navigation state
+  const [currentView, setCurrentView] = useState<View>('company-designer');
+
   // Company creation form state
   const [companyName, setCompanyName] = useState('');
   const [companyDescription, setCompanyDescription] = useState('');
@@ -283,8 +289,36 @@ function App() {
             <Building2 className="w-6 h-6 text-purple-600" />
             imCEO
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Company Designer</p>
+          <p className="text-sm text-gray-500 mt-1">AI Company Operating System</p>
         </div>
+
+        {/* Navigation */}
+        <nav className="px-4 py-2 border-b border-gray-200">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentView('company-designer')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                currentView === 'company-designer'
+                  ? 'bg-purple-100 text-purple-700'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Layout className="w-4 h-4" />
+              Company Designer
+            </button>
+            <button
+              onClick={() => setCurrentView('work-items')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                currentView === 'work-items'
+                  ? 'bg-purple-100 text-purple-700'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Kanban className="w-4 h-4" />
+              Work Items
+            </button>
+          </div>
+        </nav>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Company Section */}
@@ -675,15 +709,19 @@ function App() {
         </div>
       </aside>
 
-      {/* Main Canvas */}
-      <main className="flex-1 h-full">
-        {currentCompany ? (
-          <OrgChartCanvas />
+      {/* Main Content */}
+      <main className="flex-1 h-full overflow-hidden">
+        {currentView === 'company-designer' ? (
+          currentCompany ? (
+            <OrgChartCanvas />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+              <Building2 className="w-16 h-16 mb-4" />
+              <p className="text-lg">Create a company to start designing</p>
+            </div>
+          )
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <Building2 className="w-16 h-16 mb-4" />
-            <p className="text-lg">Create a company to start designing</p>
-          </div>
+          <WorkItemBoard />
         )}
       </main>
     </div>
