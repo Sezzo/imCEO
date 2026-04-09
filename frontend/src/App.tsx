@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Building2, Plus, Save, Trash2, X, ChevronRight, ChevronDown, Briefcase, Users, Layout, Kanban } from 'lucide-react';
+import { Building2, Plus, Save, Trash2, X, ChevronRight, ChevronDown, Briefcase, Users, Layout, Kanban, FileText } from 'lucide-react';
 import { OrgChartCanvas } from './components/company-designer/OrgChartCanvas';
 import { WorkItemBoard } from './components/work-items/WorkItemBoard';
+import { ArtifactList } from './components/artifacts/ArtifactList';
 import { useCompanyStore } from './store/companyStore';
 import {
   companyApi,
@@ -14,7 +15,7 @@ import {
   type Team,
 } from './api/client';
 
-type View = 'company-designer' | 'work-items';
+type View = 'company-designer' | 'work-items' | 'artifacts';
 
 function App() {
   // Navigation state
@@ -316,6 +317,17 @@ function App() {
             >
               <Kanban className="w-4 h-4" />
               Work Items
+            </button>
+            <button
+              onClick={() => setCurrentView('artifacts')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                currentView === 'artifacts'
+                  ? 'bg-purple-100 text-purple-700'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              Artifacts
             </button>
           </div>
         </nav>
@@ -720,8 +732,10 @@ function App() {
               <p className="text-lg">Create a company to start designing</p>
             </div>
           )
-        ) : (
+        ) : currentView === 'work-items' ? (
           <WorkItemBoard />
+        ) : (
+          <ArtifactList />
         )}
       </main>
     </div>
