@@ -1,89 +1,27 @@
-import { vi } from 'vitest';
+import { PrismaClient } from '@prisma/client';
+import { mockDeep, mockReset, DeepMockProxy } from 'jest-mock-extended';
 
-// Create mock for PrismaClient using Vitest
-export const prismaMock = {
-  company: {
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  division: {
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  department: {
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  team: {
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  roleTemplate: {
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  agentProfile: {
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  workItem: {
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    findFirst: vi.fn(),
-  },
-  artifact: {
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  workItemHistory: {
-    create: vi.fn(),
-    findMany: vi.fn(),
-  },
-  $transaction: vi.fn(),
-};
+// Create a deep mock of PrismaClient
+export const prismaMock = mockDeep<PrismaClient>() as DeepMockProxy<PrismaClient>;
 
 // Mock the database module
-vi.mock('../config/database', () => ({
+jest.mock('../config/database', () => ({
   prisma: prismaMock,
 }));
 
 // Mock the logger
-vi.mock('../config/logger', () => ({
+jest.mock('../config/logger', () => ({
   logger: {
-    child: vi.fn().mockReturnValue({
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
+    child: jest.fn().mockReturnValue({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
     }),
   },
 }));
 
 // Reset mocks before each test
 beforeEach(() => {
-  vi.clearAllMocks();
+  mockReset(prismaMock);
 });
