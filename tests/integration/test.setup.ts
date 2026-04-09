@@ -1,8 +1,10 @@
-import { PrismaClient } from '../database';
+import { PrismaClient } from '@prisma/client';
+import path from 'path';
 
 // Set test environment variables BEFORE importing anything else
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL = 'file:./test.db';
+const TEST_DB_PATH = path.join(process.cwd(), 'tests', 'test.db');
+process.env.DATABASE_URL = `file:${TEST_DB_PATH}`;
 process.env.JWT_SECRET = 'test-secret-key';
 process.env.LOG_LEVEL = 'error';
 
@@ -27,6 +29,11 @@ import { sessionRoutes } from '../../src/interface/http/routes/sessions.routes';
 // Create test Prisma client - uses SQLite from environment
 export const testPrisma = new PrismaClient({
   log: ['error'],
+  datasources: {
+    db: {
+      url: `file:${TEST_DB_PATH}`,
+    },
+  },
 });
 
 // Check if database is available (always true for SQLite)

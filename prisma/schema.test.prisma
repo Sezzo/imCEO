@@ -16,10 +16,10 @@ model Company {
   primaryObjective   String?   @map("primary_objective")
   operatingMode      String?   @map("operating_mode")
   globalPrompt       String?   @map("global_prompt")
-  globalPolicies     Json?     @map("global_policies")
-  globalSkills       Json?     @map("global_skills")
-  globalMcps         Json?     @map("global_mcps")
-  globalPlugins      Json?     @map("global_plugins")
+  globalPolicies     String?   @map("global_policies")
+  globalSkills       String?   @map("global_skills")
+  globalMcps         String?   @map("global_mcps")
+  globalPlugins      String?   @map("global_plugins")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
@@ -53,8 +53,8 @@ model Division {
   description       String?
   parentDivisionId  String?   @map("parent_division_id")
   headRoleId        String?   @map("head_role_id")
-  policies          Json?
-  defaultWorkflows  Json?     @map("default_workflows")
+  policies          String?
+  defaultWorkflows  String?   @map("default_workflows")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -73,7 +73,7 @@ model Department {
   description       String?
   headRoleId        String?   @map("head_role_id")
   scope             String?
-  policies          Json?
+  policies          String?
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -95,7 +95,7 @@ model Team {
   defaultModelProfileId String?   @map("default_model_profile_id")
   defaultSkillBundleId  String?   @map("default_skill_bundle_id")
   defaultMcpBundleId    String?   @map("default_mcp_bundle_id")
-  allowedInteractions   Json?     @map("allowed_interactions")
+  allowedInteractions   String?   @map("allowed_interactions")
   escalationChainId     String?   @map("escalation_chain_id")
   costBudgetPolicyId    String?   @map("cost_budget_policy_id")
   createdAt             DateTime  @default(now()) @map("created_at")
@@ -110,29 +110,21 @@ model Team {
 }
 
 // Roles & Agents
-enum HierarchyLevel {
-  CEO
-  Executive
-  Management
-  Lead
-  Specialist
-  Governance
-  Observer
-}
+// Note: HierarchyLevel as String for SQLite (enums not supported)
 
 model RoleTemplate {
   roleTemplateId      String          @id @default(uuid()) @map("role_template_id")
   companyId           String          @map("company_id")
   name                String
-  hierarchyLevel      HierarchyLevel  @map("hierarchy_level")
+  hierarchyLevel      String          @map("hierarchy_level")
   description         String?
   purpose             String?
-  primaryResponsibilities Json?       @map("primary_responsibilities")
-  nonResponsibilities Json?           @map("non_responsibilities")
-  decisionScope       Json?           @map("decision_scope")
-  escalationScope     Json?           @map("escalation_scope")
-  requiredArtifacts   Json?           @map("required_artifacts")
-  requiredReviews     Json?           @map("required_reviews")
+  primaryResponsibilities String?       @map("primary_responsibilities")
+  nonResponsibilities String?           @map("non_responsibilities")
+  decisionScope       String?           @map("decision_scope")
+  escalationScope       String?           @map("escalation_scope")
+  requiredArtifacts     String?           @map("required_artifacts")
+  requiredReviews       String?           @map("required_reviews")
   defaultModelProfileId String?       @map("default_model_profile_id")
   defaultSkillBundleId  String?       @map("default_skill_bundle_id")
   costClass           String?         @map("cost_class")
@@ -157,7 +149,7 @@ model AgentProfile {
   customPromptOverride  String?   @map("custom_prompt_override")
   maxParallelTasks      Int       @default(1) @map("max_parallel_tasks")
   maxContextBudget      Int?      @map("max_context_budget")
-  maxCostPerTask        Decimal?  @map("max_cost_per_task") @db.Real
+  maxCostPerTask        Float?    @map("max_cost_per_task")
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
@@ -170,46 +162,11 @@ model AgentProfile {
 }
 
 // Work Domain
-enum WorkItemType {
-  Vision
-  Goal
-  Initiative
-  Program
-  Workstream
-  Epic
-  Story
-  Task
-  Subtask
-  Bug
-  Spike
-  ReviewTask
-  TestTask
-  ReleaseTask
-}
-
-enum WorkItemState {
-  Draft
-  Proposed
-  Approved
-  Planned
-  Ready
-  InProgress
-  WaitingOnDependency
-  InReview
-  ChangesRequested
-  InTest
-  AwaitingApproval
-  ApprovedForCompletion
-  Done
-  Archived
-  Reopened
-  Rejected
-  Cancelled
-}
+// Note: Enums converted to String for SQLite compatibility
 
 model WorkItem {
   workItemId        String        @id @default(uuid()) @map("work_item_id")
-  type              WorkItemType
+  type              String
   title             String
   description       String?
   parentWorkItemId  String?       @map("parent_work_item_id")
@@ -221,10 +178,10 @@ model WorkItem {
   assignedAgentId   String?       @map("assigned_agent_id")
   priority          String?
   severity          String?
-  state             WorkItemState @default(Draft)
+  state             String        @default("Draft")
   approvalState     String?       @map("approval_state")
   riskScore         Int?          @map("risk_score")
-  costLimit         Decimal?      @map("cost_limit") @db.Real
+  costLimit         Float?        @map("cost_limit")
   estimatedEffort   Int?          @map("estimated_effort")
   actualEffort      Int?          @map("actual_effort")
   createdAt         DateTime      @default(now()) @map("created_at")
@@ -246,8 +203,8 @@ model WorkItem {
 model WorkItemHistory {
   historyId       String          @id @default(uuid()) @map("history_id")
   workItemId      String          @map("work_item_id")
-  fromState       WorkItemState   @map("from_state")
-  toState         WorkItemState   @map("to_state")
+  fromState       String          @map("from_state")
+  toState         String          @map("to_state")
   reason          String?
   actorId         String?         @map("actor_id")
   actorType       String?         @map("actor_type")
@@ -260,30 +217,6 @@ model WorkItemHistory {
   @@map("work_item_history")
 }
 
-enum DelegationType {
-  research
-  planning
-  analysis
-  architecture
-  implementation
-  testing
-  review
-  documentation
-  compliance
-  release_preparation
-  incident_response
-  remediation
-}
-
-enum DelegationState {
-  pending
-  accepted
-  in_progress
-  completed
-  failed
-  cancelled
-}
-
 model Delegation {
   delegationId          String          @id @default(uuid()) @map("delegation_id")
   sourceWorkItemId      String          @map("source_work_item_id")
@@ -292,12 +225,12 @@ model Delegation {
   targetTeamId          String          @map("target_team_id")
   targetRoleId          String?         @map("target_role_id")
   targetAgentId         String?         @map("target_agent_id")
-  delegationType        DelegationType  @map("delegation_type")
+  delegationType        String          @map("delegation_type")
   objective             String?
   scope                 String?
-  constraints           Json?
-  state                 DelegationState @default(pending)
-  costLimit             Decimal?        @map("cost_limit") @db.Real
+  constraints           String?
+  state                 String          @default("pending")
+  costLimit             Float?          @map("cost_limit")
   createdAt             DateTime        @default(now()) @map("created_at")
   acceptedAt            DateTime?       @map("accepted_at")
   completedAt           DateTime?       @map("completed_at")
@@ -307,41 +240,13 @@ model Delegation {
 }
 
 // Artifacts
-enum ArtifactType {
-  VisionBrief
-  StrategicMemo
-  GoalDefinition
-  ArchitectureProposal
-  ADR
-  SystemDesign
-  TechnicalSpec
-  APIContract
-  TaskBrief
-  TestPlan
-  TestReport
-  ReviewReport
-  DocumentationDraft
-  ReleaseNotes
-  SecurityReview
-  ComplianceReport
-}
-
-enum ArtifactStatus {
-  Draft
-  InPreparation
-  UnderReview
-  Approved
-  Superseded
-  Archived
-}
-
 model Artifact {
   artifactId        String          @id @default(uuid()) @map("artifact_id")
   companyId         String?         @map("company_id")
-  type              ArtifactType
+  type              String
   title             String
   description       String?
-  status            ArtifactStatus  @default(Draft)
+  status            String          @default("Draft")
   version           String          @default("1.0.0")
   ownerTeamId       String?         @map("owner_team_id")
   ownerAgentId      String?         @map("owner_agent_id")
@@ -360,34 +265,16 @@ model Artifact {
   @@map("artifacts")
 }
 
-enum ReviewType {
-  peer_review
-  lead_review
-  architecture_review
-  qa_review
-  security_review
-  compliance_review
-  executive_review
-}
-
-enum ReviewResult {
-  approved
-  approved_with_notes
-  changes_requested
-  rejected
-  escalated
-}
-
 model Review {
   reviewId          String        @id @default(uuid()) @map("review_id")
-  reviewType        ReviewType    @map("review_type")
+  reviewType        String        @map("review_type")
   targetWorkItemId  String?       @map("target_work_item_id")
   targetArtifactId  String?       @map("target_artifact_id")
   reviewerRoleId    String?       @map("reviewer_role_id")
   reviewerAgentId   String?       @map("reviewer_agent_id")
-  result            ReviewResult?
+  result            String?
   findings          String?
-  mandatoryFixes    Json?         @map("mandatory_fixes")
+  mandatoryFixes    String?       @map("mandatory_fixes")
   optionalNotes     String?       @map("optional_notes")
   severity          String?
   createdAt         DateTime      @default(now()) @map("created_at")
@@ -399,38 +286,15 @@ model Review {
 }
 
 // Governance
-enum PolicyType {
-  tool_policy
-  mcp_policy
-  plugin_policy
-  skill_policy
-  filesystem_policy
-  git_policy
-  review_policy
-  test_policy
-  release_policy
-  budget_policy
-  escalation_policy
-}
-
-enum PolicyAction {
-  allow
-  allow_with_warning
-  require_approval
-  block
-  quarantine
-  escalate
-}
-
 model Policy {
   policyId            String      @id @default(uuid()) @map("policy_id")
   name                String
   description         String?
-  policyType          PolicyType  @map("policy_type")
+  policyType          String      @map("policy_type")
   scopeType           String      @map("scope_type")
   scopeId             String      @map("scope_id")
   conditionExpression String?     @map("condition_expression")
-  action              PolicyAction
+  action              String
   severity            String?
   approvalRequirement String?     @map("approval_requirement")
   enabled             Boolean     @default(true)
@@ -442,14 +306,6 @@ model Policy {
   @@map("policies")
 }
 
-enum ApprovalRequestState {
-  pending
-  approved
-  rejected
-  escalated
-  expired
-}
-
 model ApprovalRequest {
   approvalRequestId       String              @id @default(uuid()) @map("approval_request_id")
   targetType              String              @map("target_type")
@@ -457,8 +313,8 @@ model ApprovalRequest {
   reason                  String?
   requestedByRoleId       String              @map("requested_by_role_id")
   requestedByAgentId    String?             @map("requested_by_agent_id")
-  requiredApproverRoleIds Json?             @map("required_approver_role_ids")
-  state                   ApprovalRequestState @default(pending)
+  requiredApproverRoleIds String?           @map("required_approver_role_ids")
+  state                   String              @default("pending")
   expiresAt               DateTime?           @map("expires_at")
   approvedAt              DateTime?           @map("approved_at")
   rejectedAt              DateTime?           @map("rejected_at")
@@ -476,13 +332,13 @@ model ModelProfile {
   description         String?
   contextWindow       Int       @map("context_window")
   maxOutputTokens     Int       @map("max_output_tokens")
-  capabilities        Json?
-  inputCostPer1k      Decimal   @map("input_cost_per_1k") @db.Real
-  outputCostPer1k     Decimal   @map("output_cost_per_1k") @db.Real
+  capabilities        String?
+  inputCostPer1k      Float     @map("input_cost_per_1k")
+  outputCostPer1k     Float     @map("output_cost_per_1k")
   cachingEnabled      Boolean   @default(false) @map("caching_enabled")
-  cachingCostPer1k    Decimal?  @map("caching_cost_per_1k") @db.Real
+  cachingCostPer1k    Float?    @map("caching_cost_per_1k")
   batchingEnabled     Boolean   @default(false) @map("batching_enabled")
-  batchingDiscount    Decimal?  @map("batching_discount") @db.Real
+  batchingDiscount    Float?    @map("batching_discount")
   isDefault           Boolean   @default(false) @map("is_default")
   isActive            Boolean   @default(true) @map("is_active")
   createdAt           DateTime  @default(now()) @map("created_at")
@@ -495,13 +351,6 @@ model ModelProfile {
 }
 
 // Reporting & Escalation
-enum ReportingLineType {
-  direct
-  dotted
-  functional
-  matrix
-}
-
 model ReportingLine {
   reportingLineId     String            @id @default(uuid()) @map("reporting_line_id")
   companyId           String            @map("company_id")
@@ -509,7 +358,7 @@ model ReportingLine {
   reporterAgentId     String?           @map("reporter_agent_id")
   reportsToRoleId     String?           @map("reports_to_role_id")
   reportsToAgentId    String?           @map("reports_to_agent_id")
-  reportingLineType   ReportingLineType @map("reporting_line_type")
+  reportingLineType   String            @map("reporting_line_type")
   isPrimary           Boolean           @default(true) @map("is_primary")
   scope               String?
   startDate           DateTime          @default(now()) @map("start_date")
@@ -525,35 +374,19 @@ model ReportingLine {
   @@map("reporting_lines")
 }
 
-enum EscalationTrigger {
-  time_based
-  failure_based
-  cost_based
-  manual
-  policy_violation
-  blocked
-}
-
-enum EscalationState {
-  active
-  triggered
-  resolved
-  cancelled
-}
-
 model EscalationChain {
   escalationChainId   String            @id @default(uuid()) @map("escalation_chain_id")
   companyId           String            @map("company_id")
   name                String
   description         String?
-  triggerType         EscalationTrigger @map("trigger_type")
+  triggerType         String            @map("trigger_type")
   triggerCondition    String            @map("trigger_condition")
   level1RoleId        String            @map("level_1_role_id")
   level2RoleId        String?           @map("level_2_role_id")
   level3RoleId        String?           @map("level_3_role_id")
   autoEscalateTime    Int?              @map("auto_escalate_time")
   notifyOnTrigger     Boolean           @default(true) @map("notify_on_trigger")
-  state               EscalationState   @default(active)
+  state               String            @default("active")
   createdAt           DateTime          @default(now()) @map("created_at")
   updatedAt           DateTime          @updatedAt @map("updated_at")
 
@@ -586,35 +419,13 @@ model EscalationEvent {
 }
 
 // Runtime
-enum TeamSessionState {
-  Queued
-  Launching
-  Active
-  Waiting
-  Idle
-  Failed
-  Completed
-  Terminated
-}
-
-enum AgentSessionState {
-  Assigned
-  Running
-  Waiting
-  Idle
-  Blocked
-  Failed
-  Completed
-  Killed
-}
-
 model TeamSession {
   teamSessionId         String          @id @default(uuid()) @map("team_session_id")
   teamId                String          @map("team_id")
   initiatingWorkItemId  String?         @map("initiating_work_item_id")
   sessionPurpose        String?         @map("session_purpose")
-  currentState          TeamSessionState @default(Queued)
-  currentCost           Decimal         @default(0) @map("current_cost") @db.Real
+  currentState          String          @default("Queued")
+  currentCost           Float           @default(0) @map("current_cost")
   currentContextUsage   Int             @default(0) @map("current_context_usage")
   launchedAt            DateTime?       @map("launched_at")
   endedAt               DateTime?       @map("ended_at")
@@ -629,8 +440,8 @@ model AgentSession {
   teamSessionId       String          @map("team_session_id")
   agentId             String          @map("agent_id")
   assignedWorkItemId  String?         @map("assigned_work_item_id")
-  state               AgentSessionState @default(Assigned)
-  costAccumulated     Decimal         @default(0) @map("cost_accumulated") @db.Real
+  state               String          @default("Assigned")
+  costAccumulated     Float           @default(0) @map("cost_accumulated")
   contextAccumulated  Int             @default(0) @map("context_accumulated")
   startedAt           DateTime?       @map("started_at")
   lastActiveAt        DateTime?       @map("last_active_at")
@@ -643,39 +454,16 @@ model AgentSession {
 }
 
 // Observability
-enum AuditEventType {
-  company_created
-  company_updated
-  division_created
-  team_created
-  work_item_created
-  work_item_state_changed
-  work_item_completed
-  delegation_created
-  delegation_completed
-  decision_approved
-  approval_requested
-  policy_violation
-  cost_threshold_reached
-  agent_session_failed
-}
-
-enum AuditSeverity {
-  info
-  warning
-  critical
-}
-
 model AuditEvent {
   auditEventId    String          @id @default(uuid()) @map("audit_event_id")
-  eventType       AuditEventType  @map("event_type")
+  eventType       String          @map("event_type")
   actorRoleId     String?         @map("actor_role_id")
   actorAgentId    String?         @map("actor_agent_id")
   targetType      String          @map("target_type")
   targetId        String          @map("target_id")
   description     String?
-  payload         Json?
-  severity        AuditSeverity
+  payload         String?
+  severity        String
   createdAt       DateTime        @default(now()) @map("created_at")
 
   @@index([createdAt])
@@ -693,9 +481,9 @@ model CostRecord {
   modelProfileId  String?   @map("model_profile_id")
   workItemId      String?   @map("work_item_id")
   costType        String    @map("cost_type")
-  value           Decimal   @db.Real
+  value           Float
   unit            String    @default("USD")
-  details         Json?
+  details         String?
   recordedAt      DateTime  @default(now()) @map("recorded_at")
 
   @@index([recordedAt])
@@ -708,36 +496,17 @@ model CostRecord {
 // ============================================================================
 
 // Skill Management
-enum SkillInvocationMode {
-  autonomous
-  interactive
-  approval_required
-}
-
-enum SkillCategory {
-  communication
-  research
-  analysis
-  coding
-  testing
-  devops
-  design
-  security
-  compliance
-  custom
-}
-
 model SkillDefinition {
   skillId           String              @id @default(uuid()) @map("skill_id")
   companyId         String              @map("company_id")
   name              String
   description       String?
-  category          SkillCategory       @default(custom)
-  invocationMode    SkillInvocationMode @default(interactive) @map("invocation_mode")
-  inputSchema       Json?               @map("input_schema")
-  outputSchema      Json?               @map("output_schema")
-  requiredPermissions Json?             @map("required_permissions")
-  configuration     Json?
+  category          String              @default("custom")
+  invocationMode    String              @default("interactive") @map("invocation_mode")
+  inputSchema       String?               @map("input_schema")
+  outputSchema      String?               @map("output_schema")
+  requiredPermissions String?             @map("required_permissions")
+  configuration     String?
   version           String              @default("1.0.0")
   isGlobal          Boolean             @default(false) @map("is_global")
   enabled           Boolean             @default(true)
@@ -775,7 +544,7 @@ model SkillBundleItem {
   itemId            String          @id @default(uuid()) @map("item_id")
   bundleId          String          @map("bundle_id")
   skillId           String          @map("skill_id")
-  configuration     Json?
+  configuration     String?
   priority          Int             @default(0)
   addedAt           DateTime        @default(now()) @map("added_at")
 
@@ -786,19 +555,13 @@ model SkillBundleItem {
   @@map("skill_bundle_items")
 }
 
-enum SkillAssignmentScope {
-  team
-  agent
-  role_template
-}
-
 model SkillAssignment {
   assignmentId      String               @id @default(uuid()) @map("assignment_id")
   skillId           String               @map("skill_id")
-  scopeType         SkillAssignmentScope @map("scope_type")
+  scopeType         String               @map("scope_type")
   scopeId           String               @map("scope_id")
-  configuration     Json?
-  overrideMode      SkillInvocationMode? @map("override_mode")
+  configuration     String?
+  overrideMode      String?              @map("override_mode")
   enabled           Boolean              @default(true)
   assignedAt        DateTime             @default(now()) @map("assigned_at")
   assignedBy        String?              @map("assigned_by")
@@ -811,33 +574,18 @@ model SkillAssignment {
 }
 
 // MCP Management
-enum MCPAuthType {
-  none
-  api_key
-  oauth
-  basic
-  bearer
-}
-
-enum MCPHealthStatus {
-  healthy
-  degraded
-  unhealthy
-  unknown
-}
-
 model MCPDefinition {
   mcpId             String           @id @default(uuid()) @map("mcp_id")
   companyId         String           @map("company_id")
   name              String
   description       String?
   serverUrl         String           @map("server_url")
-  capabilities      Json?
-  authType          MCPAuthType      @default(none) @map("auth_type")
-  authConfig        Json?            @map("auth_config")
-  healthStatus      MCPHealthStatus  @default(unknown) @map("health_status")
+  capabilities      String?
+  authType          String           @default("none") @map("auth_type")
+  authConfig        String?          @map("auth_config")
+  healthStatus      String           @default("unknown") @map("health_status")
   lastHealthCheck   DateTime?        @map("last_health_check")
-  healthCheckConfig Json?            @map("health_check_config")
+  healthCheckConfig String?          @map("health_check_config")
   isGlobal          Boolean          @default(false) @map("is_global")
   enabled           Boolean          @default(true)
   createdAt         DateTime         @default(now()) @map("created_at")
@@ -873,7 +621,7 @@ model MCPBundleItem {
   itemId            String        @id @default(uuid()) @map("item_id")
   bundleId          String        @map("bundle_id")
   mcpId             String        @map("mcp_id")
-  configuration     Json?
+  configuration     String?
   priority          Int           @default(0)
   addedAt           DateTime      @default(now()) @map("added_at")
 
@@ -884,18 +632,12 @@ model MCPBundleItem {
   @@map("mcp_bundle_items")
 }
 
-enum MCPAssignmentScope {
-  team
-  agent
-  role_template
-}
-
 model MCPAssignment {
   assignmentId      String             @id @default(uuid()) @map("assignment_id")
   mcpId             String             @map("mcp_id")
-  scopeType         MCPAssignmentScope @map("scope_type")
+  scopeType         String             @map("scope_type")
   scopeId           String             @map("scope_id")
-  configuration     Json?
+  configuration     String?
   enabled           Boolean            @default(true)
   assignedAt        DateTime           @default(now()) @map("assigned_at")
   assignedBy        String?            @map("assigned_by")
@@ -908,36 +650,20 @@ model MCPAssignment {
 }
 
 // Plugin Management
-enum PluginType {
-  tool
-  integration
-  extension
-  theme
-}
-
-enum PluginStatus {
-  pending
-  installing
-  active
-  updating
-  error
-  disabled
-}
-
 model PluginDefinition {
   pluginId          String         @id @default(uuid()) @map("plugin_id")
   companyId         String         @map("company_id")
   name              String
   description       String?
   version           String         @default("1.0.0")
-  pluginType        PluginType     @default(extension) @map("plugin_type")
+  pluginType        String         @default("extension") @map("plugin_type")
   sourceUrl         String?        @map("source_url")
   entryPoint        String         @map("entry_point")
-  permissions       Json?
-  configuration     Json?
-  dependencies      Json?
+  permissions       String?
+  configuration     String?
+  dependencies      String?
   isGlobal          Boolean        @default(false) @map("is_global")
-  status            PluginStatus   @default(pending)
+  status            String         @default("pending")
   enabled           Boolean        @default(true)
   installedAt       DateTime?      @map("installed_at")
   createdAt         DateTime       @default(now()) @map("created_at")
@@ -973,7 +699,7 @@ model PluginBundleItem {
   itemId            String         @id @default(uuid()) @map("item_id")
   bundleId          String         @map("bundle_id")
   pluginId          String         @map("plugin_id")
-  configuration     Json?
+  configuration     String?
   priority          Int            @default(0)
   addedAt           DateTime       @default(now()) @map("added_at")
 
@@ -984,18 +710,12 @@ model PluginBundleItem {
   @@map("plugin_bundle_items")
 }
 
-enum PluginAssignmentScope {
-  team
-  agent
-  role_template
-}
-
 model PluginAssignment {
   assignmentId      String               @id @default(uuid()) @map("assignment_id")
   pluginId          String               @map("plugin_id")
-  scopeType         PluginAssignmentScope @map("scope_type")
+  scopeType         String               @map("scope_type")
   scopeId           String               @map("scope_id")
-  configuration     Json?
+  configuration     String?
   enabled           Boolean              @default(true)
   assignedAt        DateTime             @default(now()) @map("assigned_at")
   assignedBy        String?              @map("assigned_by")
@@ -1018,7 +738,7 @@ model PolicyViolation {
   targetType        String    @map("target_type")
   targetId          String    @map("target_id")
   actionAttempted   String    @map("action_attempted")
-  context           Json?
+  context           String?
   severity          String
   resolved          Boolean   @default(false)
   resolvedAt        DateTime? @map("resolved_at")
@@ -1033,22 +753,6 @@ model PolicyViolation {
 }
 
 // Cost Budgets
-enum BudgetPeriod {
-  daily
-  weekly
-  monthly
-  quarterly
-  yearly
-  project
-}
-
-enum BudgetAlertLevel {
-  none
-  info
-  warning
-  critical
-}
-
 model CostBudget {
   budgetId          String           @id @default(uuid()) @map("budget_id")
   companyId         String           @map("company_id")
@@ -1056,13 +760,13 @@ model CostBudget {
   description       String?
   scopeType         String           @map("scope_type")
   scopeId           String           @map("scope_id")
-  budgetLimit       Decimal          @map("budget_limit") @db.Real
-  period            BudgetPeriod     @default(monthly)
+  budgetLimit       Float            @map("budget_limit")
+  period            String           @default("monthly")
   startDate         DateTime         @map("start_date")
   endDate           DateTime?        @map("end_date")
-  alertThresholds   Json?            @map("alert_thresholds")
-  currentSpend      Decimal          @default(0) @map("current_spend") @db.Real
-  lastAlertLevel    BudgetAlertLevel @default(none) @map("last_alert_level")
+  alertThresholds   String?          @map("alert_thresholds")
+  currentSpend      Float            @default(0) @map("current_spend")
+  lastAlertLevel    String           @default("none") @map("last_alert_level")
   lastAlertAt       DateTime?        @map("last_alert_at")
   enabled           Boolean          @default(true)
   createdAt         DateTime         @default(now()) @map("created_at")
