@@ -1,117 +1,130 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Building2, Plus, Save, Trash2, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Building2, Plus, Save, Trash2, X, ChevronRight, ChevronDown } from 'lucide-react';
 import { OrgChartCanvas } from './components/company-designer/OrgChartCanvas';
 import { useCompanyStore } from './store/companyStore';
-import { organizationApi, roleApi, type Organization, type Role } from './api/client';
+import { companyApi, divisionApi, type Company, type Division } from './api/client';
 
 function App() {
-  const [orgName, setOrgName] = useState('');
-  const [orgDescription, setOrgDescription] = useState('');
-  const [roleTitle, setRoleTitle] = useState('');
-  const [roleLevel, setRoleLevel] = useState(1);
-  const [reportsTo, setReportsTo] = useState('');
-  const [showOrgForm, setShowOrgForm] = useState(false);
-  const [showRoleForm, setShowRoleForm] = useState(false);
+  // Company creation form state
+  const [companyName, setCompanyName] = useState('');
+  const [companyDescription, setCompanyDescription] = useState('');
+  const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Division creation form state
+  const [divisionName, setDivisionName] = useState('');
+  const [divisionDescription, setDivisionDescription] = useState('');
+  const [showDivisionForm, setShowDivisionForm] = useState(false);
+
+  // UI state
+  const [expandedDivisions, setExpandedDivisions] = useState<Set<string>>(new Set());
+
   const {
-    currentOrganization,
-    roles,
-    selectedRoleId,
+    currentCompany,
+    divisions,
+    selectedDivisionId,
     isLoading,
     error,
-    setOrganization,
-    setRoles,
-    addRole,
-    updateRole,
-    removeRole,
-    setSelectedRole,
+    setCompany,
+    setDivisions,
+    addDivision,
+    removeDivision,
+    setSelectedDivision,
     setLoading,
     setError,
   } = useCompanyStore();
 
-  // Create organization
-  const handleCreateOrg = async (e: React.FormEvent) => {
+  // Create company
+  const handleCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orgName.trim()) return;
+    if (!companyName.trim()) return;
 
     setIsSaving(true);
     try {
-      const response = await organizationApi.create({
-        name: orgName,
-        description: orgDescription,
+      const response = await companyApi.create({
+        name: companyName,
+        description: companyDescription,
       });
-      setOrganization(response.data.organization);
-      setOrgName('');
-      setOrgDescription('');
-      setShowOrgForm(false);
+      setCompany(response.data.data);
+      setCompanyName('');
+      setCompanyDescription('');
+      setShowCompanyForm(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create organization');
+      setError(err instanceof Error ? err.message : 'Failed to create company');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Create role
-  const handleCreateRole = async (e: React.FormEvent) => {
+  // Create division
+  const handleCreateDivision = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentOrganization || !roleTitle.trim()) return;
+    if (!currentCompany || !divisionName.trim()) return;
 
     setIsSaving(true);
     try {
-      const response = await roleApi.create(currentOrganization.id, {
-        title: roleTitle,
-        level: roleLevel,
-        reportsTo: reportsTo || null,
+      const response = await divisionApi.create({
+        companyId: currentCompany.companyId,
+        name: divisionName,
+        description: divisionDescription,
       });
-      addRole(response.data.role);
-      setRoleTitle('');
-      setRoleLevel(1);
-      setReportsTo('');
-      setShowRoleForm(false);
+      addDivision(response.data.data);
+      setDivisionName('');
+      setDivisionDescription('');
+      setShowDivisionForm(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create role');
+      setError(err instanceof Error ? err.message : 'Failed to create division');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Delete role
-  const handleDeleteRole = async (roleId: string) => {
-    if (!currentOrganization) return;
-    if (!confirm('Are you sure you want to delete this role?')) return;
+  // Delete division
+  const handleDeleteDivision = async (divisionId: string) => {
+    if (!confirm('Are you sure you want to delete this division?')) return;
 
     try {
-      await roleApi.delete(currentOrganization.id, roleId);
-      removeRole(roleId);
+      await divisionApi.delete(divisionId);
+      removeDivision(divisionId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete role');
+      setError(err instanceof Error ? err.message : 'Failed to delete division');
     }
   };
 
-  // Load existing organizations on mount
+  // Toggle division expansion
+  const toggleDivision = (divisionId: string) => {
+    setExpandedDivisions((prev) => {
+      const next = new Set(prev);
+      if (next.has(divisionId)) {
+        next.delete(divisionId);
+      } else {
+        next.add(divisionId);
+      }
+      return next;
+    });
+  };
+
+  // Load existing companies on mount
   useEffect(() => {
-    const loadOrgs = async () => {
+    const loadCompanies = async () => {
       try {
-        const response = await organizationApi.list();
-        if (response.data.organizations.length > 0) {
-          // Load the first organization for now
-          const org = response.data.organizations[0];
-          setOrganization(org);
+        const response = await companyApi.list();
+        if (response.data.data.length > 0) {
+          // Load the first company for now
+          const company = response.data.data[0];
+          setCompany(company);
 
-          // Load roles for this organization
-          const rolesResponse = await roleApi.list(org.id);
-          setRoles(rolesResponse.data.roles);
+          // Load divisions for this company
+          const divisionsResponse = await divisionApi.listByCompany(company.companyId);
+          setDivisions(divisionsResponse.data.data);
         }
       } catch (err) {
-        console.error('Failed to load organizations:', err);
+        console.error('Failed to load companies:', err);
       }
     };
 
-    loadOrgs();
-  }, [setOrganization, setRoles]);
-
-  const selectedRole = roles.find((r) => r.id === selectedRoleId);
+    loadCompanies();
+  }, [setCompany, setDivisions]);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -126,13 +139,13 @@ function App() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Organization Section */}
+          {/* Company Section */}
           <div className="bg-gray-50 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="font-semibold text-gray-900">Organization</h2>
-              {!currentOrganization && (
+              <h2 className="font-semibold text-gray-900">Company</h2>
+              {!currentCompany && (
                 <button
-                  onClick={() => setShowOrgForm(true)}
+                  onClick={() => setShowCompanyForm(true)}
                   className="p-1 hover:bg-gray-200 rounded"
                 >
                   <Plus className="w-4 h-4" />
@@ -140,30 +153,33 @@ function App() {
               )}
             </div>
 
-            {currentOrganization ? (
+            {currentCompany ? (
               <div className="p-3 bg-white rounded border border-gray-200">
-                <h3 className="font-medium text-gray-900">{currentOrganization.name}</h3>
-                {currentOrganization.description && (
+                <h3 className="font-medium text-gray-900">{currentCompany.name}</h3>
+                {currentCompany.description && (
                   <p className="text-sm text-gray-500 mt-1">
-                    {currentOrganization.description}
+                    {currentCompany.description}
                   </p>
                 )}
+                <div className="mt-2 text-xs text-gray-400">
+                  ID: {currentCompany.companyId.slice(0, 8)}...
+                </div>
               </div>
-            ) : showOrgForm ? (
-              <form onSubmit={handleCreateOrg} className="space-y-2">
+            ) : showCompanyForm ? (
+              <form onSubmit={handleCreateCompany} className="space-y-2">
                 <input
                   type="text"
-                  placeholder="Organization name"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
+                  placeholder="Company name"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                   autoFocus
                 />
                 <input
                   type="text"
                   placeholder="Description (optional)"
-                  value={orgDescription}
-                  onChange={(e) => setOrgDescription(e.target.value)}
+                  value={companyDescription}
+                  onChange={(e) => setCompanyDescription(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 <div className="flex gap-2">
@@ -176,7 +192,7 @@ function App() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowOrgForm(false)}
+                    onClick={() => setShowCompanyForm(false)}
                     className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
                   >
                     <X className="w-4 h-4" />
@@ -184,55 +200,40 @@ function App() {
                 </div>
               </form>
             ) : (
-              <p className="text-sm text-gray-400">No organization created yet</p>
+              <p className="text-sm text-gray-400">No company created yet</p>
             )}
           </div>
 
-          {/* Roles Section */}
-          {currentOrganization && (
+          {/* Divisions Section */}
+          {currentCompany && (
             <div className="bg-gray-50 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="font-semibold text-gray-900">Roles ({roles.length})</h2>
+                <h2 className="font-semibold text-gray-900">Divisions ({divisions.length})</h2>
                 <button
-                  onClick={() => setShowRoleForm(true)}
+                  onClick={() => setShowDivisionForm(true)}
                   className="p-1 hover:bg-gray-200 rounded"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
 
-              {showRoleForm && (
-                <form onSubmit={handleCreateRole} className="space-y-2 mb-3 p-2 bg-white rounded border border-gray-200">
+              {showDivisionForm && (
+                <form onSubmit={handleCreateDivision} className="space-y-2 mb-3 p-2 bg-white rounded border border-gray-200">
                   <input
                     type="text"
-                    placeholder="Role title (e.g., CEO)"
-                    value={roleTitle}
-                    onChange={(e) => setRoleTitle(e.target.value)}
+                    placeholder="Division name"
+                    value={divisionName}
+                    onChange={(e) => setDivisionName(e.target.value)}
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                     autoFocus
                   />
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      placeholder="Level"
-                      value={roleLevel}
-                      onChange={(e) => setRoleLevel(parseInt(e.target.value) || 1)}
-                      className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    <select
-                      value={reportsTo}
-                      onChange={(e) => setReportsTo(e.target.value)}
-                      className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="">Reports to...</option>
-                      {roles.map((role) => (
-                        <option key={role.id} value={role.id}>
-                          {role.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <input
+                    type="text"
+                    placeholder="Description (optional)"
+                    value={divisionDescription}
+                    onChange={(e) => setDivisionDescription(e.target.value)}
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
                   <div className="flex gap-2">
                     <button
                       type="submit"
@@ -244,7 +245,7 @@ function App() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowRoleForm(false)}
+                      onClick={() => setShowDivisionForm(false)}
                       className="px-2 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
                     >
                       <X className="w-3 h-3" />
@@ -254,48 +255,53 @@ function App() {
               )}
 
               <div className="space-y-1">
-                {roles.length === 0 ? (
-                  <p className="text-sm text-gray-400">No roles defined yet</p>
+                {divisions.length === 0 ? (
+                  <p className="text-sm text-gray-400">No divisions defined yet</p>
                 ) : (
-                  roles.map((role) => (
-                    <div
-                      key={role.id}
-                      onClick={() => setSelectedRole(role.id)}
-                      className={`
-                        flex items-center justify-between p-2 rounded cursor-pointer text-sm
-                        ${selectedRoleId === role.id ? 'bg-purple-100 border border-purple-300' : 'bg-white border border-gray-200 hover:border-purple-300'}
-                      `}
-                    >
-                      <div className="min-w-0">
-                        <span className="font-medium truncate block">{role.title}</span>
-                        <span className="text-xs text-gray-500">Level {role.level}</span>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteRole(role.id);
+                  divisions.map((division) => (
+                    <div key={division.divisionId}>
+                      <div
+                        onClick={() => {
+                          toggleDivision(division.divisionId);
+                          setSelectedDivision(division.divisionId);
                         }}
-                        className="p-1 hover:bg-red-100 hover:text-red-600 rounded"
+                        className={`
+                          flex items-center justify-between p-2 rounded cursor-pointer text-sm
+                          ${selectedDivisionId === division.divisionId
+                            ? 'bg-purple-100 border border-purple-300'
+                            : 'bg-white border border-gray-200 hover:border-purple-300'
+                          }
+                        `}
                       >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                        <div className="flex items-center gap-1 min-w-0">
+                          {expandedDivisions.has(division.divisionId) ? (
+                            <ChevronDown className="w-3 h-3 text-gray-500 shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-3 h-3 text-gray-500 shrink-0" />
+                          )}
+                          <span className="font-medium truncate">{division.name}</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDivision(division.divisionId);
+                          }}
+                          className="p-1 hover:bg-red-100 hover:text-red-600 rounded shrink-0"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {/* Placeholder for departments - will be expanded later */}
+                      {expandedDivisions.has(division.divisionId) && (
+                        <div className="ml-4 mt-1 space-y-1">
+                          <div className="p-2 text-sm text-gray-400 italic">
+                            Departments will appear here...
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Selected Role Details */}
-          {selectedRole && (
-            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
-              <h3 className="font-medium text-purple-900">{selectedRole.title}</h3>
-              <div className="mt-2 space-y-1 text-sm">
-                <p className="text-purple-700">Level: {selectedRole.level}</p>
-                {selectedRole.reportsTo && (
-                  <p className="text-purple-700">
-                    Reports to: {roles.find(r => r.id === selectedRole.reportsTo)?.title || 'Unknown'}
-                  </p>
                 )}
               </div>
             </div>
@@ -311,12 +317,12 @@ function App() {
 
       {/* Main Canvas */}
       <main className="flex-1 h-full">
-        {currentOrganization ? (
+        {currentCompany ? (
           <OrgChartCanvas />
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
             <Building2 className="w-16 h-16 mb-4" />
-            <p className="text-lg">Create an organization to start designing</p>
+            <p className="text-lg">Create a company to start designing</p>
           </div>
         )}
       </main>
