@@ -41,7 +41,7 @@ describe('ArtifactService', () => {
 
       expect(prismaMock.artifact.findMany).toHaveBeenCalledWith({
         where: {
-          type: 'Document',
+          type: 'TechnicalSpec',
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -87,7 +87,7 @@ describe('ArtifactService', () => {
 
       expect(prismaMock.artifact.findMany).toHaveBeenCalledWith({
         where: {
-          type: 'TechnicalSpec',
+          type: 'Document',
           status: 'Draft',
           sourceWorkItemId: 'workitem-123',
         },

@@ -51,7 +51,7 @@ describe('WorkItemService', () => {
       await service.findAll(filters);
 
       expect(prismaMock.workItem.findMany).toHaveBeenCalledWith({
-        where: { state: WorkItemState.Draft },
+        where: { state: 'Draft' },
         orderBy: { createdAt: 'desc' },
       });
     });
@@ -63,7 +63,7 @@ describe('WorkItemService', () => {
       await service.findAll(filters);
 
       expect(prismaMock.workItem.findMany).toHaveBeenCalledWith({
-        where: { type: WorkItemType.Task },
+        where: { type: 'Task' },
         orderBy: { createdAt: 'desc' },
       });
     });
@@ -88,8 +88,8 @@ describe('WorkItemService', () => {
 
       expect(prismaMock.workItem.findMany).toHaveBeenCalledWith({
         where: {
-          state: WorkItemState.Draft,
-          type: WorkItemType.Task,
+          state: 'Draft',
+          type: 'Task',
           owningTeamId: 'team-123',
         },
         orderBy: { createdAt: 'desc' },
@@ -132,7 +132,7 @@ describe('WorkItemService', () => {
 
   describe('create', () => {
     const createDTO: CreateWorkItemDTO = {
-      type: WorkItemType.Task,
+      type: 'Task',
       title: 'New Work Item',
       description: 'New Description',
     };
@@ -303,83 +303,83 @@ describe('WorkItemService', () => {
       });
       prismaMock.workItem.update.mockResolvedValue({
         ...mockWorkItem,
-        state: WorkItemState.Proposed,
+        state: 'Proposed',
       });
 
-      const result = await service.transition('wi-123', WorkItemState.Proposed, 'Initial proposal', 'user-123', 'user');
+      const result = await service.transition('wi-123', 'Proposed', 'Initial proposal', 'user-123', 'user');
 
       expect(result).toBeDefined();
     });
 
     it('should transition from Proposed to Approved', async () => {
-      prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, state: WorkItemState.Proposed });
+      prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, state: 'Proposed' });
       prismaMock.workItem.update.mockResolvedValue({
         ...mockWorkItem,
-        state: WorkItemState.Approved,
+        state: 'Approved',
       });
 
-      const result = await service.transition('wi-123', WorkItemState.Approved, 'Approved by manager', 'manager-123', 'user');
+      const result = await service.transition('wi-123', 'Approved', 'Approved by manager', 'manager-123', 'user');
 
       expect(result).toBeDefined();
     });
 
     it('should transition from Ready to InProgress and set startedAt', async () => {
-      prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, state: WorkItemState.Ready });
+      prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, state: 'Ready' });
       prismaMock.workItem.update.mockResolvedValue({
         ...mockWorkItem,
-        state: WorkItemState.InProgress,
+        state: 'InProgress',
         startedAt: new Date(),
       });
 
-      await service.transition('wi-123', WorkItemState.InProgress);
+      await service.transition('wi-123', 'InProgress');
 
       expect(prismaMock.workItem.update).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({
-          state: WorkItemState.InProgress,
+          state: 'InProgress',
           startedAt: expect.any(Date),
         }),
       }));
     });
 
     it('should transition to Done and set completedAt', async () => {
-      prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, state: WorkItemState.ApprovedForCompletion });
+      prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, state: 'ApprovedForCompletion' });
       prismaMock.workItem.update.mockResolvedValue({
         ...mockWorkItem,
-        state: WorkItemState.Done,
+        state: 'Done',
         completedAt: new Date(),
       });
 
-      await service.transition('wi-123', WorkItemState.Done);
+      await service.transition('wi-123', 'Done');
 
       expect(prismaMock.workItem.update).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({
-          state: WorkItemState.Done,
+          state: 'Done',
           completedAt: expect.any(Date),
         }),
       }));
     });
 
     it('should throw error for invalid state transition', async () => {
-      prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, state: WorkItemState.Draft });
+      prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, state: 'Draft' });
 
       await expect(
-        service.transition('wi-123', WorkItemState.Done, 'Trying to skip states')
+        service.transition('wi-123', 'Done', 'Trying to skip states')
       ).rejects.toThrow('Invalid state transition from Draft to Done');
     });
 
     it('should return null when work item not found', async () => {
       prismaMock.workItem.findUnique.mockResolvedValue(null);
 
-      const result = await service.transition('non-existent-id', WorkItemState.Proposed);
+      const result = await service.transition('non-existent-id', 'Proposed');
 
       expect(result).toBeNull();
     });
 
     it('should handle all valid transitions from InProgress', async () => {
-      const validTargets = [WorkItemState.WaitingOnDependency, WorkItemState.InReview, WorkItemState.ChangesRequested, WorkItemState.Cancelled];
+      const validTargets = ['WaitingOnDependency', 'InReview', 'ChangesRequested', 'Cancelled'];
 
       for (const targetState of validTargets) {
-        prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, state: WorkItemState.InProgress });
+        prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, state: 'InProgress' });
         prismaMock.$transaction.mockImplementation(async (operations: any) => {
           if (Array.isArray(operations)) {
             return operations;
@@ -406,10 +406,10 @@ describe('WorkItemService', () => {
       });
       prismaMock.workItem.update.mockResolvedValue({
         ...mockWorkItem,
-        state: WorkItemState.Proposed,
+        state: 'Proposed',
       });
 
-      await service.transition('wi-123', WorkItemState.Proposed, 'Test reason', 'actor-123', 'user');
+      await service.transition('wi-123', 'Proposed', 'Test reason', 'actor-123', 'user');
 
       expect(prismaMock.$transaction).toHaveBeenCalled();
     });
@@ -421,8 +421,8 @@ describe('WorkItemService', () => {
         {
           historyId: 'hist-1',
           workItemId: 'wi-123',
-          fromState: WorkItemState.Draft,
-          toState: WorkItemState.Proposed,
+          fromState: 'Draft',
+          toState: 'Proposed',
           reason: 'Initial proposal',
           actorId: 'user-123',
           actorType: 'user',
@@ -452,9 +452,9 @@ describe('WorkItemService', () => {
   describe('getBoard', () => {
     it('should return work items grouped by state', async () => {
       const mockItems = [
-        { ...mockWorkItem, state: WorkItemState.InProgress, priority: 'high' },
-        { ...mockWorkItem, workItemId: 'wi-2', state: WorkItemState.Done, priority: 'low' },
-        { ...mockWorkItem, workItemId: 'wi-3', state: WorkItemState.Draft, priority: 'medium' },
+        { ...mockWorkItem, state: 'InProgress', priority: 'high' },
+        { ...mockWorkItem, workItemId: 'wi-2', state: 'Done', priority: 'low' },
+        { ...mockWorkItem, workItemId: 'wi-3', state: 'Draft', priority: 'medium' },
       ];
       prismaMock.workItem.findMany.mockResolvedValue(mockItems);
 
@@ -517,9 +517,9 @@ describe('WorkItemService', () => {
         ...mockWorkItem,
         parentWorkItem: {
           workItemId: 'parent-123',
-          type: WorkItemType.Task,
+          type: 'Task',
           title: 'Parent Item',
-          state: WorkItemState.InProgress,
+          state: 'InProgress',
           agent: null,
           team: { teamId: 'team-123', name: 'Parent Team' },
         },
@@ -705,7 +705,7 @@ describe('WorkItemService', () => {
       prismaMock.workItem.findUnique.mockResolvedValue({
         ...mockWorkItem,
         childWorkItems: [
-          { workItemId: 'child-1', title: 'Child 1', type: WorkItemType.Task, state: WorkItemState.Done },
+          { workItemId: 'child-1', title: 'Child 1', type: 'Task', state: 'Done' },
         ],
         artifacts: [
           { artifactId: 'art-1', title: 'Artifact 1', type: 'Document', status: 'Final' },
@@ -732,8 +732,8 @@ describe('WorkItemService', () => {
       prismaMock.workItem.findUnique.mockResolvedValue({
         ...mockWorkItem,
         childWorkItems: [
-          { ...mockWorkItem, workItemId: 'child-1', state: WorkItemState.Done, estimatedEffort: 5, actualEffort: 5 },
-          { ...mockWorkItem, workItemId: 'child-2', state: WorkItemState.InProgress, estimatedEffort: 5, actualEffort: 2 },
+          { ...mockWorkItem, workItemId: 'child-1', state: 'Done', estimatedEffort: 5, actualEffort: 5 },
+          { ...mockWorkItem, workItemId: 'child-2', state: 'InProgress', estimatedEffort: 5, actualEffort: 2 },
         ],
       });
 
