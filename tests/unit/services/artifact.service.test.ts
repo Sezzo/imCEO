@@ -1,13 +1,12 @@
 import { ArtifactService, CreateArtifactDTO, UpdateArtifactDTO, ArtifactFilters } from '../../../src/application/services/artifact.service';
 import { prismaMock } from '../../setup';
-import { ArtifactType, ArtifactStatus } from '@prisma/client';
 
 describe('ArtifactService', () => {
   const service = new ArtifactService();
 
   const mockArtifact = {
     artifactId: 'artifact-123',
-    type: ArtifactType.TechnicalSpec,
+    type: 'TechnicalSpec',
     title: 'Test Artifact',
     description: 'Test Description',
     content: 'Test Content',
@@ -15,7 +14,7 @@ describe('ArtifactService', () => {
     ownerTeamId: 'team-123',
     ownerAgentId: 'agent-123',
     sourceWorkItemId: 'workitem-123',
-    status: ArtifactStatus.Draft,
+    status: 'Draft',
     createdAt: new Date(),
     updatedAt: new Date(),
   } as any;
@@ -42,7 +41,7 @@ describe('ArtifactService', () => {
 
       expect(prismaMock.artifact.findMany).toHaveBeenCalledWith({
         where: {
-          type: ArtifactType.TechnicalSpec,
+          type: 'TechnicalSpec',
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -56,7 +55,7 @@ describe('ArtifactService', () => {
 
       expect(prismaMock.artifact.findMany).toHaveBeenCalledWith({
         where: {
-          status: ArtifactStatus.Draft,
+          status: 'Draft',
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -88,8 +87,8 @@ describe('ArtifactService', () => {
 
       expect(prismaMock.artifact.findMany).toHaveBeenCalledWith({
         where: {
-          type: ArtifactType.TechnicalSpec,
-          status: ArtifactStatus.Draft,
+          type: 'TechnicalSpec',
+          status: 'Draft',
           sourceWorkItemId: 'workitem-123',
         },
         orderBy: { createdAt: 'desc' },
@@ -140,7 +139,7 @@ describe('ArtifactService', () => {
 
   describe('create', () => {
     const createDTO: CreateArtifactDTO = {
-      type: ArtifactType.TechnicalSpec,
+      type: 'TechnicalSpec',
       title: 'New Artifact',
       description: 'New Description',
     };

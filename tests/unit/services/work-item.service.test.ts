@@ -1,6 +1,5 @@
 import { WorkItemService, CreateWorkItemDTO, UpdateWorkItemDTO, WorkItemFilters } from '../../../src/application/services/work-item.service';
 import { prismaMock } from '../../setup';
-import { WorkItemState, WorkItemType } from '@prisma/client';
 import { vi } from 'vitest';
 
 describe('WorkItemService', () => {
@@ -8,10 +7,10 @@ describe('WorkItemService', () => {
 
   const mockWorkItem = {
     workItemId: 'wi-123',
-    type: WorkItemType.Task,
+    type: 'Task',
     title: 'Test Work Item',
     description: 'Test Description',
-    state: WorkItemState.Draft,
+    state: 'Draft',
     parentWorkItemId: null,
     companyId: 'company-123',
     divisionId: null,
