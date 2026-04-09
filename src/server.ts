@@ -20,6 +20,8 @@ import { workItemRoutes } from './interface/http/routes/work-item.routes';
 import { artifactRoutes } from './interface/http/routes/artifact.routes';
 import { policyRoutes } from './interface/http/routes/policy.routes';
 import { modelProfileRoutes } from './interface/http/routes/model-profile.routes';
+import { reportingLineRoutes } from './interface/http/routes/reporting-line.routes';
+import { escalationChainRoutes } from './interface/http/routes/escalation-chain.routes';
 import { healthRoutes } from './interface/http/routes/health.routes';
 import { sessionRoutes } from './interface/http/routes/sessions.routes';
 
@@ -74,6 +76,8 @@ async function buildServer() {
   await server.register(artifactRoutes, { prefix: '/api/v1' });
   await server.register(policyRoutes, { prefix: '/api/v1' });
   await server.register(modelProfileRoutes, { prefix: '/api/v1' });
+  await server.register(reportingLineRoutes, { prefix: '/api/v1' });
+  await server.register(escalationChainRoutes, { prefix: '/api/v1' });
   await server.register(sessionRoutes, { prefix: '/api/v1' });
 
   // Error handler
