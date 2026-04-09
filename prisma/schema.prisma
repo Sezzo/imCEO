@@ -222,8 +222,26 @@ model WorkItem {
   parentWorkItem    WorkItem?     @relation("WorkItemHierarchy", fields: [parentWorkItemId], references: [workItemId])
   childWorkItems    WorkItem[]    @relation("WorkItemHierarchy")
   artifacts         Artifact[]
+  history           WorkItemHistory[]
 
   @@map("work_items")
+}
+
+model WorkItemHistory {
+  historyId       String          @id @default(uuid()) @map("history_id")
+  workItemId      String          @map("work_item_id")
+  fromState       WorkItemState   @map("from_state")
+  toState         WorkItemState   @map("to_state")
+  reason          String?
+  actorId         String?         @map("actor_id")
+  actorType       String?         @map("actor_type")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  workItem        WorkItem        @relation(fields: [workItemId], references: [workItemId], onDelete: Cascade)
+
+  @@index([workItemId])
+  @@index([createdAt])
+  @@map("work_item_history")
 }
 
 enum DelegationType {

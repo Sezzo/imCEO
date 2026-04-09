@@ -104,7 +104,7 @@ export class WorkItemService {
     });
   }
 
-  async transition(id: string, toState: WorkItemState, reason?: string) {
+  async transition(id: string, toState: WorkItemState, reason?: string, actorId?: string, actorType?: string) {
     serviceLogger.info({ workItemId: id, toState, reason }, 'Transitioning work item');
 
     const workItem = await prisma.workItem.findUnique({
@@ -121,14 +121,29 @@ export class WorkItemService {
       throw new Error(`Invalid state transition from ${workItem.state} to ${toState}`);
     }
 
-    return prisma.workItem.update({
-      where: { workItemId: id },
-      data: {
-        state: toState,
-        ...(toState === 'InProgress' && { startedAt: new Date() }),
-        ...(toState === 'Done' && { completedAt: new Date() }),
-      },
-    });
+    // Perform transition and create history entry in a transaction
+    const [updated] = await prisma.$transaction([
+      prisma.workItem.update({
+        where: { workItemId: id },
+        data: {
+          state: toState,
+          ...(toState === 'InProgress' && { startedAt: new Date() }),
+          ...(toState === 'Done' && { completedAt: new Date() }),
+        },
+      }),
+      prisma.workItemHistory.create({
+        data: {
+          workItemId: id,
+          fromState: workItem.state,
+          toState,
+          reason,
+          actorId,
+          actorType,
+        },
+      }),
+    ]);
+
+    return updated;
   }
 
   private isValidTransition(from: WorkItemState, to: WorkItemState): boolean {
@@ -159,9 +174,10 @@ export class WorkItemService {
 
   async getHistory(id: string) {
     serviceLogger.debug({ workItemId: id }, 'Getting work item history');
-    // This would typically query an audit log or history table
-    // For now, return a placeholder
-    return [];
+    return prisma.workItemHistory.findMany({
+      where: { workItemId: id },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async getBoard() {
