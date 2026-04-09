@@ -42,6 +42,10 @@ coverage/
 *.sqlite
 *.sqlite3
 
+# Test databases
+tests/test.db
+frontend/tests/test.db
+
 # Misc
 .cache/
 temp/
