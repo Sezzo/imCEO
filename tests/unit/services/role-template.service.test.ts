@@ -1,6 +1,5 @@
 import { RoleTemplateService, CreateRoleTemplateDTO, UpdateRoleTemplateDTO } from '../../../src/application/services/role-template.service';
 import { prismaMock } from '../../setup';
-import { HierarchyLevel } from '@prisma/client';
 
 describe('RoleTemplateService', () => {
   const service = new RoleTemplateService();
@@ -9,7 +8,7 @@ describe('RoleTemplateService', () => {
     roleTemplateId: 'role-123',
     companyId: 'company-123',
     name: 'Test Role',
-    hierarchyLevel: HierarchyLevel.Specialist,
+    hierarchyLevel: 'Specialist',
     description: 'Test Description',
     purpose: 'Test Purpose',
     primaryResponsibilities: ['Responsibility 1', 'Responsibility 2'],
@@ -100,7 +99,7 @@ describe('RoleTemplateService', () => {
     const createDTO: CreateRoleTemplateDTO = {
       companyId: 'company-123',
       name: 'New Role',
-      hierarchyLevel: HierarchyLevel.Specialist,
+      hierarchyLevel: 'Specialist',
       description: 'New Description',
     };
 
@@ -196,11 +195,11 @@ describe('RoleTemplateService', () => {
 
     it('should update role template hierarchy level', async () => {
       const levelUpdateDTO: UpdateRoleTemplateDTO = {
-        hierarchyLevel: HierarchyLevel.Management,
+        hierarchyLevel: 'Management',
       };
       prismaMock.roleTemplate.update.mockResolvedValue({
         ...mockRoleTemplate,
-        hierarchyLevel: HierarchyLevel.Management,
+        hierarchyLevel: 'Management',
       });
 
       await service.update('role-123', levelUpdateDTO);
@@ -209,7 +208,7 @@ describe('RoleTemplateService', () => {
         where: { roleTemplateId: 'role-123' },
         data: {
           name: undefined,
-          hierarchyLevel: HierarchyLevel.Management,
+          hierarchyLevel: 'Management',
           description: undefined,
           purpose: undefined,
           primaryResponsibilities: undefined,

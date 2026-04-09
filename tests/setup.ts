@@ -68,8 +68,8 @@ const createPrismaMock = () => {
     };
   }
 
-  // Add transaction methods
-  mock.$transaction = vi.fn((cb: any) => cb(mock));
+  // Add transaction methods - will be defined after mock creation
+  mock.$transaction = vi.fn();
   mock.$connect = vi.fn();
   mock.$disconnect = vi.fn();
   mock.$queryRaw = vi.fn();
@@ -83,14 +83,255 @@ const createPrismaMock = () => {
 // Create the mock
 export const prismaMock = createPrismaMock();
 
+// Define $transaction implementation separately to ensure proper scoping
+prismaMock.$transaction.mockImplementation((args: any): Promise<any[]> => {
+  // If called with array, return a promise that resolves to array
+  if (Array.isArray(args)) {
+    // Create a promise chain that resolves each promise and collects results
+    return new Promise((resolve) => {
+      const results: any[] = [];
+      let index = 0;
+
+      function processNext(): void {
+        if (index >= args.length) {
+          resolve(results);
+          return;
+        }
+        const promise = Promise.resolve(args[index]);
+        index++;
+        promise.then((result) => {
+          results.push(result);
+          processNext();
+        });
+      }
+
+      processNext();
+    });
+  }
+  // If called with callback, execute callback
+  if (typeof args === 'function') {
+    return Promise.resolve(args(prismaMock));
+  }
+  return Promise.resolve([]);
+});
+
+// Store reference to mock for database config
+let mockPrismaInstance: any = null;
+
+export function setMockPrisma(instance: any) {
+  mockPrismaInstance = instance;
+}
+
+export function getMockPrisma() {
+  return mockPrismaInstance;
+}
+
+// Define enums as string constants for SQLite compatibility
+const WorkItemType = {
+  Vision: 'Vision',
+  Goal: 'Goal',
+  Epic: 'Epic',
+  Feature: 'Feature',
+  Story: 'Story',
+  Task: 'Task',
+  Bug: 'Bug',
+  Improvement: 'Improvement',
+  Spike: 'Spike',
+};
+
+const WorkItemState = {
+  Draft: 'Draft',
+  Proposed: 'Proposed',
+  Ready: 'Ready',
+  Approved: 'Approved',
+  InProgress: 'InProgress',
+  WaitingOnDependency: 'WaitingOnDependency',
+  InReview: 'InReview',
+  ChangesRequested: 'ChangesRequested',
+  ApprovedForCompletion: 'ApprovedForCompletion',
+  Done: 'Done',
+  Cancelled: 'Cancelled',
+};
+
+const ArtifactType = {
+  Document: 'Document',
+  TechnicalSpec: 'TechnicalSpec',
+  Architecture: 'Architecture',
+  Design: 'Design',
+  Code: 'Code',
+  TestPlan: 'TestPlan',
+  TestCase: 'TestCase',
+  TestResult: 'TestResult',
+  Review: 'Review',
+  MeetingNotes: 'MeetingNotes',
+  Decision: 'Decision',
+  Policy: 'Policy',
+};
+
+const ArtifactStatus = {
+  Draft: 'Draft',
+  InReview: 'InReview',
+  Approved: 'Approved',
+  Rejected: 'Rejected',
+  Archived: 'Archived',
+};
+
+const PolicyType = {
+  AccessControl: 'AccessControl',
+  ApprovalWorkflow: 'ApprovalWorkflow',
+  CostLimit: 'CostLimit',
+  Escalation: 'Escalation',
+  Audit: 'Audit',
+  Compliance: 'Compliance',
+};
+
+const PolicyAction = {
+  RequireApproval: 'RequireApproval',
+  AutoApprove: 'AutoApprove',
+  AutoReject: 'AutoReject',
+  RequireReview: 'RequireReview',
+  Notify: 'Notify',
+};
+
+const ReviewType = {
+  Technical: 'Technical',
+  Design: 'Design',
+  Code: 'Code',
+  Test: 'Test',
+  Documentation: 'Documentation',
+};
+
+const ReviewResult = {
+  Approved: 'Approved',
+  Rejected: 'Rejected',
+  NeedsChanges: 'NeedsChanges',
+};
+
+const ApprovalRequestState = {
+  Pending: 'Pending',
+  Approved: 'Approved',
+  Rejected: 'Rejected',
+  Escalated: 'Escalated',
+};
+
+const AuditEventType = {
+  Create: 'Create',
+  Update: 'Update',
+  Delete: 'Delete',
+  Read: 'Read',
+};
+
+const AuditSeverity = {
+  Info: 'Info',
+  Warning: 'Warning',
+  Error: 'Error',
+  Critical: 'Critical',
+};
+
+const DelegationType = {
+  Full: 'Full',
+  Partial: 'Partial',
+};
+
+const DelegationState = {
+  Active: 'Active',
+  Expired: 'Expired',
+  Revoked: 'Revoked',
+};
+
+const EscalationTrigger = {
+  CostExceeded: 'CostExceeded',
+  TimeExceeded: 'TimeExceeded',
+  FailedAttempts: 'FailedAttempts',
+  Manual: 'Manual',
+};
+
+const EscalationState = {
+  Active: 'Active',
+  Resolved: 'Resolved',
+  Ignored: 'Ignored',
+};
+
+const ReportingLineType = {
+  Direct: 'Direct',
+  Dotted: 'Dotted',
+  Matrix: 'Matrix',
+};
+
 // Mock the PrismaClient
-vi.mock('@prisma/client', () => {
+vi.mock('@prisma/client', async (importOriginal) => {
   return {
-    PrismaClient: vi.fn(() => prismaMock),
+    PrismaClient: vi.fn(() => {
+      const mock = getMockPrisma() || {};
+      return mock;
+    }),
+    // Export all enums
+    WorkItemType,
+    WorkItemState,
+    ArtifactType,
+    ArtifactStatus,
+    PolicyType,
+    PolicyAction,
+    ReviewType,
+    ReviewResult,
+    ApprovalRequestState,
+    AuditEventType,
+    AuditSeverity,
+    DelegationType,
+    DelegationState,
+    EscalationTrigger,
+    EscalationState,
+    ReportingLineType,
   };
 });
 
-// Reset all mocks before each test
+// Mock the database config - using factory that returns the mock
+vi.mock('../src/config/database', async (importOriginal) => {
+  return {
+    get prisma() {
+      return getMockPrisma() || {};
+    },
+    disconnectDatabase: vi.fn(),
+  };
+});
+
+// Set the mock instance after creation
+setMockPrisma(prismaMock);
+
+// Reset all mocks before each test (but preserve implementations)
 beforeEach(() => {
-  vi.resetAllMocks();
+  vi.clearAllMocks();
+});
+
+// Re-apply $transaction implementation after each reset
+beforeEach(() => {
+  prismaMock.$transaction.mockImplementation((args: any): Promise<any[]> => {
+    // If called with array, return a promise that resolves to array
+    if (Array.isArray(args)) {
+      return new Promise((resolve) => {
+        const results: any[] = [];
+        let index = 0;
+
+        function processNext(): void {
+          if (index >= args.length) {
+            resolve(results);
+            return;
+          }
+          const promise = Promise.resolve(args[index]);
+          index++;
+          promise.then((result) => {
+            results.push(result);
+            processNext();
+          });
+        }
+
+        processNext();
+      });
+    }
+    // If called with callback, execute callback
+    if (typeof args === 'function') {
+      return Promise.resolve(args(prismaMock));
+    }
+    return Promise.resolve([]);
+  });
 });

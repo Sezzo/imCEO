@@ -1,6 +1,6 @@
-import { WorkItemService, CreateWorkItemDTO, UpdateWorkItemDTO, WorkItemFilters } from '../../../src/application/services/work-item.service';
-import { prismaMock } from '../../setup';
 import { vi } from 'vitest';
+import { prismaMock } from '../../setup';
+import { WorkItemService, CreateWorkItemDTO, UpdateWorkItemDTO, WorkItemFilters } from '../../../src/application/services/work-item.service';
 
 describe('WorkItemService', () => {
   const service = new WorkItemService();
@@ -318,6 +318,16 @@ describe('WorkItemService', () => {
         ...mockWorkItem,
         state: 'Approved',
       });
+      prismaMock.workItemHistory.create.mockResolvedValue({
+        historyId: 'history-123',
+        workItemId: 'wi-123',
+        fromState: 'Proposed',
+        toState: 'Approved',
+        reason: 'Approved by manager',
+        actorId: 'manager-123',
+        actorType: 'user',
+        createdAt: new Date(),
+      } as any);
 
       const result = await service.transition('wi-123', 'Approved', 'Approved by manager', 'manager-123', 'user');
 
@@ -331,6 +341,16 @@ describe('WorkItemService', () => {
         state: 'InProgress',
         startedAt: new Date(),
       });
+      prismaMock.workItemHistory.create.mockResolvedValue({
+        historyId: 'history-123',
+        workItemId: 'wi-123',
+        fromState: 'Ready',
+        toState: 'InProgress',
+        reason: undefined,
+        actorId: undefined,
+        actorType: undefined,
+        createdAt: new Date(),
+      } as any);
 
       await service.transition('wi-123', 'InProgress');
 
@@ -349,6 +369,16 @@ describe('WorkItemService', () => {
         state: 'Done',
         completedAt: new Date(),
       });
+      prismaMock.workItemHistory.create.mockResolvedValue({
+        historyId: 'history-123',
+        workItemId: 'wi-123',
+        fromState: 'ApprovedForCompletion',
+        toState: 'Done',
+        reason: undefined,
+        actorId: undefined,
+        actorType: undefined,
+        createdAt: new Date(),
+      } as any);
 
       await service.transition('wi-123', 'Done');
 
@@ -633,13 +663,26 @@ describe('WorkItemService', () => {
   });
 
   describe('getSiblings', () => {
+    beforeEach(() => {
+      prismaMock.workItem.findUnique.mockReset();
+      prismaMock.workItem.findMany.mockReset();
+    });
+
     it('should return sibling work items', async () => {
       prismaMock.workItem.findUnique.mockResolvedValue({
-        ...mockWorkItem,
+        workItemId: 'wi-123',
         parentWorkItemId: 'parent-123',
-      });
+      } as any);
       prismaMock.workItem.findMany.mockResolvedValue([
-        { ...mockWorkItem, workItemId: 'sibling-1', agent: null, team: null },
+        {
+          workItemId: 'sibling-1',
+          type: 'Task',
+          title: 'Sibling Item',
+          state: 'Draft',
+          priority: 'medium',
+          agent: null,
+          team: null,
+        } as any,
       ]);
 
       const result = await service.getSiblings('wi-123');
