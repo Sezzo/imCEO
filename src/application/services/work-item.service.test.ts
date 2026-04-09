@@ -1,6 +1,7 @@
 import { WorkItemService, CreateWorkItemDTO, UpdateWorkItemDTO, WorkItemFilters } from './work-item.service';
 import { prismaMock } from '../../test/singleton';
 import { WorkItemState, WorkItemType } from '@prisma/client';
+import { vi } from 'vitest';
 
 describe('WorkItemService', () => {
   const service = new WorkItemService();
@@ -595,17 +596,39 @@ describe('WorkItemService', () => {
         childWorkItems: [
           {
             ...mockWorkItem,
-            workItemId: 'wi-123', // Circular reference
+            workItemId: 'child-1',
             agent: null,
             team: null,
           },
         ],
       };
-      prismaMock.workItem.findUnique.mockResolvedValue(mockItem);
+      // Second call returns child with circular reference back to parent
+      const mockChildWithCircular = {
+        ...mockWorkItem,
+        workItemId: 'child-1',
+        childWorkItems: [
+          {
+            ...mockWorkItem,
+            workItemId: 'wi-123', // Points back to parent
+            agent: null,
+            team: null,
+          },
+        ],
+      };
+
+      prismaMock.workItem.findUnique
+        .mockResolvedValueOnce(mockItem)
+        .mockResolvedValueOnce(mockChildWithCircular)
+        .mockResolvedValueOnce({
+          ...mockWorkItem,
+          workItemId: 'wi-123',
+          childWorkItems: [],
+        });
 
       const result = await service.getDescendants('wi-123');
 
-      expect(result).toHaveLength(0); // Should skip visited items
+      expect(result).toHaveLength(1); // Only child-1, parent is skipped due to visited set
+      expect(result[0].id).toBe('child-1');
     });
   });
 
@@ -639,10 +662,17 @@ describe('WorkItemService', () => {
 
   describe('moveInHierarchy', () => {
     it('should move work item to new parent', async () => {
-      prismaMock.workItem.findUnique.mockResolvedValue({
-        ...mockWorkItem,
-        workItemId: 'new-parent-123',
-      });
+      prismaMock.workItem.findUnique
+        .mockResolvedValueOnce({
+          ...mockWorkItem,
+          workItemId: 'new-parent-123',
+          childWorkItems: [],
+        })
+        .mockResolvedValueOnce({
+          ...mockWorkItem,
+          workItemId: 'wi-123',
+          childWorkItems: [],
+        });
       prismaMock.workItem.update.mockResolvedValue({
         ...mockWorkItem,
         parentWorkItemId: 'new-parent-123',
@@ -829,7 +859,7 @@ describe('WorkItemService', () => {
       prismaMock.workItem.findUnique.mockResolvedValue({ ...mockWorkItem, workItemId: 'new-parent-123' });
 
       // Mock getDescendants to return the child as a descendant of new parent
-      jest.spyOn(service, 'getDescendants').mockResolvedValueOnce([
+      vi.spyOn(service, 'getDescendants').mockResolvedValueOnce([
         { id: 'wi-1' } as any,
       ]);
 
