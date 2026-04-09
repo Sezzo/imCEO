@@ -11,7 +11,7 @@ export default defineConfig({
       reporter: ['text', 'html', 'lcov'],
       exclude: ['node_modules/', 'dist/', 'tests/'],
     },
-    setupFiles: ['./tests/setup.ts'],
+    setupFiles: ['./src/test/setup.ts'],
   },
   resolve: {
     alias: {
