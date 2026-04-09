@@ -34,14 +34,14 @@ describe('ArtifactService', () => {
     });
 
     it('should filter by type', async () => {
-      const filters: ArtifactFilters = { type: 'Document' };
+      const filters: ArtifactFilters = { type: 'TechnicalSpec' };
       prismaMock.artifact.findMany.mockResolvedValue([mockArtifact]);
 
       await service.findAll(filters);
 
       expect(prismaMock.artifact.findMany).toHaveBeenCalledWith({
         where: {
-          type: 'TechnicalSpec',
+          type: 'Document',
         },
         orderBy: { createdAt: 'desc' },
       });
