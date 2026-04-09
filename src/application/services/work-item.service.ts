@@ -267,7 +267,7 @@ export class WorkItemService {
     while (currentId && !visited.has(currentId)) {
       visited.add(currentId);
 
-      const item = await prisma.workItem.findUnique({
+      const item: any = await prisma.workItem.findUnique({
         where: { workItemId: currentId },
         include: {
           parentWorkItem: {
@@ -571,7 +571,7 @@ export class WorkItemService {
       visited.add(currentId);
       path.unshift(currentId);
 
-      const item = await prisma.workItem.findUnique({
+      const item: any = await prisma.workItem.findUnique({
         where: { workItemId: currentId },
         select: { parentWorkItemId: true },
       });

@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-// Create mock for PrismaClient
+// Create mock for PrismaClient using Vitest
 export const prismaMock = {
   company: {
     findMany: vi.fn(),
