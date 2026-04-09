@@ -30,6 +30,18 @@ model Company {
   workItems          WorkItem[]
   artifacts          Artifact[]
   policies           Policy[]
+  modelProfiles      ModelProfile[]
+  reportingLines     ReportingLine[]
+  escalationChains   EscalationChain[]
+
+  // Phase C relations
+  skillDefinitions   SkillDefinition[]
+  skillBundles       SkillBundle[]
+  mcpDefinitions     MCPDefinition[]
+  mcpBundles         MCPBundle[]
+  pluginDefinitions PluginDefinition[]
+  pluginBundles      PluginBundle[]
+  costBudgets        CostBudget[]
 
   @@map("companies")
 }
@@ -74,6 +86,7 @@ model Department {
 model Team {
   teamId                String    @id @default(uuid()) @map("team_id")
   departmentId          String    @map("department_id")
+  companyId             String?   @map("company_id")
   name                  String
   description           String?
   mission               String?
@@ -89,6 +102,7 @@ model Team {
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
   department            Department @relation(fields: [departmentId], references: [departmentId], onDelete: Cascade)
+  company               Company?   @relation(fields: [companyId], references: [companyId])
   agentProfiles         AgentProfile[]
   workItems             WorkItem[]
 
@@ -134,6 +148,7 @@ model RoleTemplate {
 model AgentProfile {
   agentId               String    @id @default(uuid()) @map("agent_id")
   teamId                String    @map("team_id")
+  companyId             String?   @map("company_id")
   roleTemplateId        String?   @map("role_template_id")
   displayName           String    @map("display_name")
   internalName          String    @map("internal_name")
@@ -147,6 +162,7 @@ model AgentProfile {
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
   team                  Team      @relation(fields: [teamId], references: [teamId], onDelete: Cascade)
+  company               Company?  @relation(fields: [companyId], references: [companyId])
   roleTemplate          RoleTemplate? @relation(fields: [roleTemplateId], references: [roleTemplateId])
   workItems             WorkItem[]
 
@@ -321,6 +337,7 @@ enum ArtifactStatus {
 
 model Artifact {
   artifactId        String          @id @default(uuid()) @map("artifact_id")
+  companyId         String?         @map("company_id")
   type              ArtifactType
   title             String
   description       String?
@@ -336,6 +353,7 @@ model Artifact {
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
 
+  company           Company?        @relation(fields: [companyId], references: [companyId])
   workItem          WorkItem?       @relation(fields: [sourceWorkItemId], references: [workItemId])
   reviews           Review[]
 
@@ -447,6 +465,124 @@ model ApprovalRequest {
   escalatedAt             DateTime?           @map("escalated_at")
 
   @@map("approval_requests")
+}
+
+// Model Profiles & Configuration
+model ModelProfile {
+  modelProfileId      String    @id @default(uuid()) @map("model_profile_id")
+  companyId           String    @map("company_id")
+  name                String
+  modelVariant        String    @map("model_variant")
+  description         String?
+  contextWindow       Int       @map("context_window")
+  maxOutputTokens     Int       @map("max_output_tokens")
+  capabilities        Json?
+  inputCostPer1k      Decimal   @map("input_cost_per_1k") @db.Decimal(10, 6)
+  outputCostPer1k     Decimal   @map("output_cost_per_1k") @db.Decimal(10, 6)
+  cachingEnabled      Boolean   @default(false) @map("caching_enabled")
+  cachingCostPer1k    Decimal?  @map("caching_cost_per_1k") @db.Decimal(10, 6)
+  batchingEnabled     Boolean   @default(false) @map("batching_enabled")
+  batchingDiscount    Decimal?  @map("batching_discount") @db.Decimal(3, 2)
+  isDefault           Boolean   @default(false) @map("is_default")
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  company             Company   @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("model_profiles")
+}
+
+// Reporting & Escalation
+enum ReportingLineType {
+  direct
+  dotted
+  functional
+  matrix
+}
+
+model ReportingLine {
+  reportingLineId     String            @id @default(uuid()) @map("reporting_line_id")
+  companyId           String            @map("company_id")
+  reporterRoleId      String?           @map("reporter_role_id")
+  reporterAgentId     String?           @map("reporter_agent_id")
+  reportsToRoleId     String?           @map("reports_to_role_id")
+  reportsToAgentId    String?           @map("reports_to_agent_id")
+  reportingLineType   ReportingLineType @map("reporting_line_type")
+  isPrimary           Boolean           @default(true) @map("is_primary")
+  scope               String?
+  startDate           DateTime          @default(now()) @map("start_date")
+  endDate             DateTime?         @map("end_date")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  company             Company           @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([reporterRoleId])
+  @@index([reportsToRoleId])
+  @@map("reporting_lines")
+}
+
+enum EscalationTrigger {
+  time_based
+  failure_based
+  cost_based
+  manual
+  policy_violation
+  blocked
+}
+
+enum EscalationState {
+  active
+  triggered
+  resolved
+  cancelled
+}
+
+model EscalationChain {
+  escalationChainId   String            @id @default(uuid()) @map("escalation_chain_id")
+  companyId           String            @map("company_id")
+  name                String
+  description         String?
+  triggerType         EscalationTrigger @map("trigger_type")
+  triggerCondition    String            @map("trigger_condition")
+  level1RoleId        String            @map("level_1_role_id")
+  level2RoleId        String?           @map("level_2_role_id")
+  level3RoleId        String?           @map("level_3_role_id")
+  autoEscalateTime    Int?              @map("auto_escalate_time")
+  notifyOnTrigger     Boolean           @default(true) @map("notify_on_trigger")
+  state               EscalationState   @default(active)
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  company             Company           @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+  escalationEvents    EscalationEvent[]
+
+  @@index([companyId])
+  @@map("escalation_chains")
+}
+
+model EscalationEvent {
+  escalationEventId   String          @id @default(uuid()) @map("escalation_event_id")
+  escalationChainId   String          @map("escalation_chain_id")
+  targetType          String          @map("target_type")
+  targetId            String          @map("target_id")
+  triggeredBy         String?         @map("triggered_by")
+  triggerReason       String          @map("trigger_reason")
+  currentLevel        Int             @map("current_level")
+  escalatedToRoleId   String?         @map("escalated_to_role_id")
+  escalatedToAgentId  String?         @map("escalated_to_agent_id")
+  resolvedAt          DateTime?       @map("resolved_at")
+  resolution          String?
+  createdAt           DateTime        @default(now()) @map("created_at")
+
+  escalationChain     EscalationChain @relation(fields: [escalationChainId], references: [escalationChainId], onDelete: Cascade)
+
+  @@index([escalationChainId])
+  @@index([targetId])
+  @@map("escalation_events")
 }
 
 // Runtime
@@ -565,4 +701,376 @@ model CostRecord {
   @@index([recordedAt])
   @@index([scopeId])
   @@map("cost_records")
+}
+
+// ============================================================================
+// GOVERNANCE LAYER - PHASE C
+// ============================================================================
+
+// Skill Management
+enum SkillInvocationMode {
+  autonomous
+  interactive
+  approval_required
+}
+
+enum SkillCategory {
+  communication
+  research
+  analysis
+  coding
+  testing
+  devops
+  design
+  security
+  compliance
+  custom
+}
+
+model SkillDefinition {
+  skillId           String              @id @default(uuid()) @map("skill_id")
+  companyId         String              @map("company_id")
+  name              String
+  description       String?
+  category          SkillCategory       @default(custom)
+  invocationMode    SkillInvocationMode @default(interactive) @map("invocation_mode")
+  inputSchema       Json?               @map("input_schema")
+  outputSchema      Json?               @map("output_schema")
+  requiredPermissions Json?             @map("required_permissions")
+  configuration     Json?
+  version           String              @default("1.0.0")
+  isGlobal          Boolean             @default(false) @map("is_global")
+  enabled           Boolean             @default(true)
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  company           Company             @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+  bundleItems       SkillBundleItem[]
+  assignments       SkillAssignment[]
+
+  @@index([companyId])
+  @@index([category])
+  @@map("skill_definitions")
+}
+
+model SkillBundle {
+  bundleId          String            @id @default(uuid()) @map("bundle_id")
+  companyId         String            @map("company_id")
+  name              String
+  description       String?
+  category          String?
+  isGlobal          Boolean           @default(false) @map("is_global")
+  enabled           Boolean           @default(true)
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  company           Company           @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+  items             SkillBundleItem[]
+
+  @@index([companyId])
+  @@map("skill_bundles")
+}
+
+model SkillBundleItem {
+  itemId            String          @id @default(uuid()) @map("item_id")
+  bundleId          String          @map("bundle_id")
+  skillId           String          @map("skill_id")
+  configuration     Json?
+  priority          Int             @default(0)
+  addedAt           DateTime        @default(now()) @map("added_at")
+
+  bundle            SkillBundle     @relation(fields: [bundleId], references: [bundleId], onDelete: Cascade)
+  skill             SkillDefinition @relation(fields: [skillId], references: [skillId], onDelete: Cascade)
+
+  @@unique([bundleId, skillId])
+  @@map("skill_bundle_items")
+}
+
+enum SkillAssignmentScope {
+  team
+  agent
+  role_template
+}
+
+model SkillAssignment {
+  assignmentId      String               @id @default(uuid()) @map("assignment_id")
+  skillId           String               @map("skill_id")
+  scopeType         SkillAssignmentScope @map("scope_type")
+  scopeId           String               @map("scope_id")
+  configuration     Json?
+  overrideMode      SkillInvocationMode? @map("override_mode")
+  enabled           Boolean              @default(true)
+  assignedAt        DateTime             @default(now()) @map("assigned_at")
+  assignedBy        String?              @map("assigned_by")
+
+  skill             SkillDefinition      @relation(fields: [skillId], references: [skillId], onDelete: Cascade)
+
+  @@index([skillId])
+  @@index([scopeType, scopeId])
+  @@map("skill_assignments")
+}
+
+// MCP Management
+enum MCPAuthType {
+  none
+  api_key
+  oauth
+  basic
+  bearer
+}
+
+enum MCPHealthStatus {
+  healthy
+  degraded
+  unhealthy
+  unknown
+}
+
+model MCPDefinition {
+  mcpId             String           @id @default(uuid()) @map("mcp_id")
+  companyId         String           @map("company_id")
+  name              String
+  description       String?
+  serverUrl         String           @map("server_url")
+  capabilities      Json?
+  authType          MCPAuthType      @default(none) @map("auth_type")
+  authConfig        Json?            @map("auth_config")
+  healthStatus      MCPHealthStatus  @default(unknown) @map("health_status")
+  lastHealthCheck   DateTime?        @map("last_health_check")
+  healthCheckConfig Json?            @map("health_check_config")
+  isGlobal          Boolean          @default(false) @map("is_global")
+  enabled           Boolean          @default(true)
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  company           Company          @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+  bundleItems       MCPBundleItem[]
+  assignments       MCPAssignment[]
+
+  @@index([companyId])
+  @@map("mcp_definitions")
+}
+
+model MCPBundle {
+  bundleId          String          @id @default(uuid()) @map("bundle_id")
+  companyId         String          @map("company_id")
+  name              String
+  description       String?
+  category          String?
+  isGlobal          Boolean         @default(false) @map("is_global")
+  enabled           Boolean         @default(true)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  company           Company         @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+  items             MCPBundleItem[]
+
+  @@index([companyId])
+  @@map("mcp_bundles")
+}
+
+model MCPBundleItem {
+  itemId            String        @id @default(uuid()) @map("item_id")
+  bundleId          String        @map("bundle_id")
+  mcpId             String        @map("mcp_id")
+  configuration     Json?
+  priority          Int           @default(0)
+  addedAt           DateTime      @default(now()) @map("added_at")
+
+  bundle            MCPBundle     @relation(fields: [bundleId], references: [bundleId], onDelete: Cascade)
+  mcp               MCPDefinition @relation(fields: [mcpId], references: [mcpId], onDelete: Cascade)
+
+  @@unique([bundleId, mcpId])
+  @@map("mcp_bundle_items")
+}
+
+enum MCPAssignmentScope {
+  team
+  agent
+  role_template
+}
+
+model MCPAssignment {
+  assignmentId      String             @id @default(uuid()) @map("assignment_id")
+  mcpId             String             @map("mcp_id")
+  scopeType         MCPAssignmentScope @map("scope_type")
+  scopeId           String             @map("scope_id")
+  configuration     Json?
+  enabled           Boolean            @default(true)
+  assignedAt        DateTime           @default(now()) @map("assigned_at")
+  assignedBy        String?            @map("assigned_by")
+
+  mcp               MCPDefinition      @relation(fields: [mcpId], references: [mcpId], onDelete: Cascade)
+
+  @@index([mcpId])
+  @@index([scopeType, scopeId])
+  @@map("mcp_assignments")
+}
+
+// Plugin Management
+enum PluginType {
+  tool
+  integration
+  extension
+  theme
+}
+
+enum PluginStatus {
+  pending
+  installing
+  active
+  updating
+  error
+  disabled
+}
+
+model PluginDefinition {
+  pluginId          String         @id @default(uuid()) @map("plugin_id")
+  companyId         String         @map("company_id")
+  name              String
+  description       String?
+  version           String         @default("1.0.0")
+  pluginType        PluginType     @default(extension) @map("plugin_type")
+  sourceUrl         String?        @map("source_url")
+  entryPoint        String         @map("entry_point")
+  permissions       Json?
+  configuration     Json?
+  dependencies      Json?
+  isGlobal          Boolean        @default(false) @map("is_global")
+  status            PluginStatus   @default(pending)
+  enabled           Boolean        @default(true)
+  installedAt       DateTime?      @map("installed_at")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  company           Company        @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+  bundleItems       PluginBundleItem[]
+  assignments       PluginAssignment[]
+
+  @@index([companyId])
+  @@map("plugin_definitions")
+}
+
+model PluginBundle {
+  bundleId          String         @id @default(uuid()) @map("bundle_id")
+  companyId         String         @map("company_id")
+  name              String
+  description       String?
+  category          String?
+  isGlobal          Boolean        @default(false) @map("is_global")
+  enabled           Boolean        @default(true)
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  company           Company        @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+  items             PluginBundleItem[]
+
+  @@index([companyId])
+  @@map("plugin_bundles")
+}
+
+model PluginBundleItem {
+  itemId            String         @id @default(uuid()) @map("item_id")
+  bundleId          String         @map("bundle_id")
+  pluginId          String         @map("plugin_id")
+  configuration     Json?
+  priority          Int            @default(0)
+  addedAt           DateTime       @default(now()) @map("added_at")
+
+  bundle            PluginBundle   @relation(fields: [bundleId], references: [bundleId], onDelete: Cascade)
+  plugin            PluginDefinition @relation(fields: [pluginId], references: [pluginId], onDelete: Cascade)
+
+  @@unique([bundleId, pluginId])
+  @@map("plugin_bundle_items")
+}
+
+enum PluginAssignmentScope {
+  team
+  agent
+  role_template
+}
+
+model PluginAssignment {
+  assignmentId      String               @id @default(uuid()) @map("assignment_id")
+  pluginId          String               @map("plugin_id")
+  scopeType         PluginAssignmentScope @map("scope_type")
+  scopeId           String               @map("scope_id")
+  configuration     Json?
+  enabled           Boolean              @default(true)
+  assignedAt        DateTime             @default(now()) @map("assigned_at")
+  assignedBy        String?              @map("assigned_by")
+
+  plugin            PluginDefinition     @relation(fields: [pluginId], references: [pluginId], onDelete: Cascade)
+
+  @@index([pluginId])
+  @@index([scopeType, scopeId])
+  @@map("plugin_assignments")
+}
+
+// Policy Violations
+model PolicyViolation {
+  violationId       String    @id @default(uuid()) @map("violation_id")
+  policyId          String    @map("policy_id")
+  scopeType         String    @map("scope_type")
+  scopeId           String    @map("scope_id")
+  actorId           String?   @map("actor_id")
+  actorType         String?   @map("actor_type")
+  targetType        String    @map("target_type")
+  targetId          String    @map("target_id")
+  actionAttempted   String    @map("action_attempted")
+  context           Json?
+  severity          String
+  resolved          Boolean   @default(false)
+  resolvedAt        DateTime? @map("resolved_at")
+  resolvedBy        String?   @map("resolved_by")
+  resolutionNote    String?   @map("resolution_note")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@index([policyId])
+  @@index([scopeId])
+  @@index([createdAt])
+  @@map("policy_violations")
+}
+
+// Cost Budgets
+enum BudgetPeriod {
+  daily
+  weekly
+  monthly
+  quarterly
+  yearly
+  project
+}
+
+enum BudgetAlertLevel {
+  none
+  info
+  warning
+  critical
+}
+
+model CostBudget {
+  budgetId          String           @id @default(uuid()) @map("budget_id")
+  companyId         String           @map("company_id")
+  name              String
+  description       String?
+  scopeType         String           @map("scope_type")
+  scopeId           String           @map("scope_id")
+  budgetLimit       Decimal          @map("budget_limit") @db.Decimal(10, 2)
+  period            BudgetPeriod     @default(monthly)
+  startDate         DateTime         @map("start_date")
+  endDate           DateTime?        @map("end_date")
+  alertThresholds   Json?            @map("alert_thresholds")
+  currentSpend      Decimal          @default(0) @map("current_spend") @db.Decimal(10, 2)
+  lastAlertLevel    BudgetAlertLevel @default(none) @map("last_alert_level")
+  lastAlertAt       DateTime?        @map("last_alert_at")
+  enabled           Boolean          @default(true)
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  company           Company          @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([scopeType, scopeId])
+  @@map("cost_budgets")
 }
