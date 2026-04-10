@@ -24,6 +24,7 @@ import { TeamCreateTool } from './src/tools/TeamCreateTool';
 import { TeamDeleteTool } from './src/tools/TeamDeleteTool';
 import { TaskCreateTool } from './src/tools/TaskCreateTool';
 import { TaskListTool } from './src/tools/TaskListTool';
+import { TaskGetTool } from './src/tools/TaskGetTool';
 import { TaskUpdateTool } from './src/tools/TaskUpdateTool';
 import { SendMessageTool } from './src/tools/SendMessageTool';
 import { SpawnAgentTool } from './src/tools/SpawnAgentTool';
@@ -161,6 +162,17 @@ const AgentTeamsPlugin: Plugin = async (ctx) => {
         },
         async execute(args) {
           return await TaskListTool.execute(args, toolContext);
+        },
+      }),
+
+      TaskGet: tool({
+        description: 'Get details of a specific task including dependency information.',
+        args: {
+          team_name: z.string().describe('Team the task belongs to'),
+          task_id: z.string().describe('ID of the task to retrieve'),
+        },
+        async execute(args) {
+          return await TaskGetTool.execute(args, toolContext);
         },
       }),
 
