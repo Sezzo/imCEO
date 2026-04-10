@@ -1,0 +1,88 @@
+version: '3.8'
+
+# ============================================================================
+# Docker Compose Erweiterung für Agent Teams
+# ============================================================================
+
+services:
+  # API Server (bestehend + erweitert)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+      - '3001:3001' # WebSocket Port
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/imceo?schema=public
+      - JWT_SECRET=${JWT_SECRET}
+      # Agent Teams
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AGENT_TEAMS_WS_PORT=3001
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app-network
+
+  # Redis für Agent Execution Queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+
+  # Background Agent Worker (optional)
+  agent-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npm run worker # Separater Start-Befehl
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/imceo?schema=public
+      - REDIS_URL=redis://redis:6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app-network
+
+  # Bestehende Services
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=imceo
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - '80:80'
+    environment:
+      - VITE_API_URL=http://localhost:3000/api/v1
+      - VITE_AGENT_TEAMS_WS_URL=ws://localhost:3001
+    networks:
+      - app-network
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  app-network:
+    driver: bridge

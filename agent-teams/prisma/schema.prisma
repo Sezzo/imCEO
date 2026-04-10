@@ -1,0 +1,502 @@
+// ============================================================================
+// AGENT TEAMS - Prisma Schema Erweiterungen
+// Claude Code Agent Teams Feature Port für OpenCode
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// CORE ORGANIZATION (from existing schema)
+// ============================================================================
+
+model Company {
+  companyId       String    @id @default(uuid()) @map("company_id")
+  name            String
+  description     String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  teams           Team[]
+  agentProfiles   AgentProfile[]
+  agentTeams      AgentTeam[]
+
+  @@map("companies")
+}
+
+model Team {
+  teamId          String    @id @default(uuid()) @map("team_id")
+  companyId       String    @map("company_id")
+  name            String
+  description     String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  company         Company   @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+  agentProfiles   AgentProfile[]
+
+  @@map("teams")
+}
+
+model AgentProfile {
+  agentId         String    @id @default(uuid()) @map("agent_id")
+  teamId          String    @map("team_id")
+  companyId       String    @map("company_id")
+  displayName     String    @map("display_name")
+  internalName    String    @map("internal_name")
+  status          String    @default("active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  team            Team      @relation(fields: [teamId], references: [teamId], onDelete: Cascade)
+  company         Company   @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+
+  @@map("agent_profiles")
+}
+
+// ============================================================================
+// AGENT TEAMS - Runtime Models
+// ============================================================================
+
+model AgentTeam {
+  teamId            String            @id @default(uuid()) @map("team_id")
+  teamName          String            @unique @map("team_name")
+  description       String?
+  companyId         String            @map("company_id")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  // Team lead reference
+  leadAgentId       String            @map("lead_agent_id")
+  leadSessionId     String?           @map("lead_session_id")
+
+  // Runtime state
+  currentState      TeamRuntimeState  @default(active) @map("current_state")
+  metadata          Json?             // Flexible metadata storage
+
+  // Relations
+  company           Company           @relation(fields: [companyId], references: [companyId], onDelete: Cascade)
+  members           AgentTeamMember[]
+  tasks             AgentTask[]
+  mailbox           TeamMailbox[]
+  sessions          AgentTeamSession[]
+  executionLogs     AgentExecutionLog[]
+
+  @@index([companyId])
+  @@index([currentState])
+  @@map("agent_teams")
+}
+
+enum TeamRuntimeState {
+  active
+  cleaning_up
+  cleaned_up
+  error
+}
+
+// Team Members (mirrors TeamFile.members array from Claude Code)
+model AgentTeamMember {
+  memberId          String            @id @default(uuid()) @map("member_id")
+  teamId            String            @map("team_id")
+  agentId           String            @map("agent_id")  // format: "name@teamName"
+  name              String
+  agentType         String?           @map("agent_type")
+  model             String?
+  color             String?
+
+  // Execution context
+  backendType       BackendType       @default(in_process) @map("backend_type")
+  processId         String?           @map("process_id")  // for out-of-process
+  sessionId         String?           @map("session_id")  // for tracking
+
+  // State
+  isActive          Boolean           @default(true) @map("is_active")
+  isLeader          Boolean           @default(false) @map("is_leader")
+  planModeRequired  Boolean           @default(false) @map("plan_mode_required")
+
+  // Timestamps
+  joinedAt          DateTime          @default(now()) @map("joined_at")
+  leftAt            DateTime?         @map("left_at")
+
+  // Relations
+  team              AgentTeam         @relation(fields: [teamId], references: [teamId], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([agentId])
+  @@index([isActive])
+  @@map("agent_team_members")
+}
+
+enum BackendType {
+  in_process
+  tmux
+  iterm2
+  subprocess
+  container
+}
+
+// ============================================================================
+// TASK MANAGEMENT - Shared Task List
+// ============================================================================
+
+model AgentTask {
+  taskId            String            @id @default(uuid()) @map("task_id")
+  teamId            String            @map("team_id")
+
+  // Task content
+  subject           String
+  description       String?
+  activeForm        String?           @map("active_form")  // Present continuous form for spinner (e.g., "Running tests")
+
+  // Task state
+  status            TaskStatus        @default(pending)
+  ownerAgentId      String?           @map("owner_agent_id")  // Agent currently working on it
+
+  // Dependencies
+  blockedBy         String[]          @default([]) @map("blocked_by")  // taskIds
+  blocks            String[]          @default([]) @map("blocks")        // taskIds
+
+  // Metadata
+  metadata          Json?
+
+  // Hooks validation
+  hookValidationStatus  HookValidationStatus @default(pending) @map("hook_validation_status")
+  hookValidationErrors  String?          @map("hook_validation_errors")
+
+  // Timestamps
+  createdAt         DateTime          @default(now()) @map("created_at")
+  claimedAt         DateTime?         @map("claimed_at")
+  completedAt       DateTime?         @map("completed_at")
+
+  // Relations
+  team              AgentTeam         @relation(fields: [teamId], references: [teamId], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([status])
+  @@index([ownerAgentId])
+  @@index([blockedBy])
+  @@map("agent_tasks")
+}
+
+enum TaskStatus {
+  pending
+  in_progress
+  completed
+  blocked
+  cancelled
+}
+
+enum HookValidationStatus {
+  pending
+  validating
+  passed
+  blocked
+  error
+}
+
+// ============================================================================
+// MAILBOX SYSTEM - Inter-Agent Messaging
+// ============================================================================
+
+model TeamMailbox {
+  messageId         String            @id @default(uuid()) @map("message_id")
+  teamId            String            @map("team_id")
+
+  // Message routing
+  toAgentId         String            @map("to_agent_id")      // Recipient
+  fromAgentId       String            @map("from_agent_id")    // Sender
+
+  // Message content
+  messageType       MessageType       @default(text) @map("message_type")
+  content           String            // JSON for structured, plain text otherwise
+  summary           String?           // For UI preview (5-10 words)
+
+  // Message state
+  isRead            Boolean           @default(false) @map("is_read")
+  readAt            DateTime?         @map("read_at")
+  isProcessed       Boolean           @default(false) @map("is_processed")
+  processedAt       DateTime?         @map("processed_at")
+
+  // Structured message fields
+  requestId         String?           @map("request_id")       // For shutdown/plan approval
+  responseType      ResponseType?     @map("response_type")    // approve/reject
+  feedback          String?           // For rejection feedback
+
+  // Timestamps
+  createdAt         DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  team              AgentTeam         @relation(fields: [teamId], references: [teamId], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([toAgentId])
+  @@index([isRead])
+  @@index([isProcessed])
+  @@index([createdAt])
+  @@map("team_mailbox")
+}
+
+enum MessageType {
+  text
+  shutdown_request
+  shutdown_response
+  plan_approval_request
+  plan_approval_response
+  broadcast
+  task_notification
+  system
+}
+
+enum ResponseType {
+  approve
+  reject
+}
+
+// ============================================================================
+// AGENT SESSIONS - Runtime Execution State
+// ============================================================================
+
+model AgentTeamSession {
+  sessionId         String            @id @default(uuid()) @map("session_id")
+  teamId            String            @map("team_id")
+  agentId           String            @map("agent_id")
+
+  // Session context
+  parentSessionId   String?           @map("parent_session_id")  // Team lead's session
+  prompt            String            // Initial prompt/task
+  description       String?           // Short description for UI
+
+  // Execution state
+  executionState    ExecutionState    @default(queued) @map("execution_state")
+
+  // Plan mode (if required)
+  awaitingPlanApproval  Boolean       @default(false) @map("awaiting_plan_approval")
+  planSubmitted     Boolean           @default(false) @map("plan_submitted")
+  planContent       String?           @map("plan_content")
+  planApproved      Boolean?          @map("plan_approved")
+  planFeedback      String?           @map("plan_feedback")
+
+  // Shutdown handling
+  shutdownRequested Boolean           @default(false) @map("shutdown_requested")
+  shutdownApproved  Boolean?          @map("shutdown_approved")
+  shutdownReason    String?           @map("shutdown_reason")
+
+  // Cost & Token tracking
+  accumulatedCost   Decimal           @default(0) @map("accumulated_cost") @db.Decimal(10, 4)
+  accumulatedTokens Int               @default(0) @map("accumulated_tokens")
+
+  // Timestamps
+  createdAt         DateTime          @default(now()) @map("created_at")
+  startedAt         DateTime?         @map("started_at")
+  lastActiveAt      DateTime?         @map("last_active_at")
+  endedAt           DateTime?         @map("ended_at")
+
+  // Relations
+  team              AgentTeam         @relation(fields: [teamId], references: [teamId], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([agentId])
+  @@index([executionState])
+  @@index([parentSessionId])
+  @@map("agent_team_sessions")
+}
+
+enum ExecutionState {
+  queued
+  initializing
+  running
+  waiting_for_plan_approval
+  idle
+  shutting_down
+  completed
+  failed
+  killed
+}
+
+// ============================================================================
+// EXECUTION LOGGING - Observability & Debugging
+// ============================================================================
+
+model AgentExecutionLog {
+  logId             String            @id @default(uuid()) @map("log_id")
+  sessionId         String            @map("session_id")
+  agentId           String            @map("agent_id")
+  teamId            String            @map("team_id")
+
+  // Log content
+  eventType         AgentEventType    @map("event_type")
+  eventData         Json              @map("event_data")
+
+  // Context
+  toolName          String?           @map("tool_name")
+  model             String?
+  tokenCount        Int?              @map("token_count")
+  costAmount        Decimal?          @map("cost_amount") @db.Decimal(10, 6)
+
+  // Timestamp
+  createdAt         DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  team              AgentTeam         @relation(fields: [teamId], references: [teamId], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([agentId])
+  @@index([teamId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("agent_execution_logs")
+}
+
+enum AgentEventType {
+  session_started
+  session_initialized
+  tool_called
+  tool_completed
+  tool_failed
+  message_sent
+  message_received
+  message_broadcast
+  plan_submitted
+  plan_approved
+  plan_rejected
+  shutdown_requested
+  shutdown_approved
+  shutdown_rejected
+  task_claimed
+  task_completed
+  task_blocked
+  session_completed
+  session_failed
+  session_killed
+  session_idle
+  error
+}
+
+// ============================================================================
+// HOOK EXECUTION - Task & Agent Hooks
+// ============================================================================
+
+model AgentHook {
+  hookId            String            @id @default(uuid()) @map("hook_id")
+  teamId            String            @map("team_id")
+
+  hookType          HookType          @map("hook_type")
+  name              String
+  scriptContent     String            @map("script_content")  // Shell script or command
+  isEnabled         Boolean           @default(true) @map("is_enabled")
+
+  // Execution config
+  timeoutMs         Int               @default(30000) @map("timeout_ms")
+  blocking          Boolean           @default(true)  // If true, blocks task creation/completion
+
+  // Stats
+  executionCount    Int               @default(0) @map("execution_count")
+  lastExecutedAt    DateTime?         @map("last_executed_at")
+  lastResult        HookResult?       @map("last_result")
+
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  @@index([teamId])
+  @@index([hookType])
+  @@index([isEnabled])
+  @@map("agent_hooks")
+}
+
+enum HookType {
+  task_created
+  task_completed
+  teammate_idle
+  teammate_shutdown
+}
+
+enum HookResult {
+  success
+  warning
+  blocked
+  error
+}
+
+// ============================================================================
+// AGENT DEFINITIONS - Custom Agent Types
+// ============================================================================
+
+model AgentDefinition {
+  definitionId      String            @id @default(uuid()) @map("definition_id")
+  companyId         String            @map("company_id")
+
+  identifier        String            @unique  // e.g., "security-reviewer", "test-runner"
+  displayName       String            @map("display_name")
+  description       String?
+  whenToUse         String            @map("when_to_use")  // Instructions for the AI
+
+  // Configuration
+  systemPrompt      String            @map("system_prompt")
+  model             String?           // Default model, null = inherit from leader
+  color             String?           // UI color
+  allowedTools      String[]          @default([]) @map("allowed_tools")  // Tool allowlist
+  requiredMcpServers String[]         @default([]) @map("required_mcp_servers")
+
+  // Execution settings
+  background        Boolean           @default(false)  // Run in background by default
+  isolation         IsolationType?    // worktree, remote, null
+  planModeRequired  Boolean           @default(false) @map("plan_mode_required")
+
+  // Scope
+  isGlobal          Boolean           @default(false) @map("is_global")
+  isBuiltIn         Boolean           @default(false) @map("is_built_in")  // Built-in like "Explore", "Plan"
+
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  @@index([companyId])
+  @@index([identifier])
+  @@map("agent_definitions")
+}
+
+enum IsolationType {
+  worktree
+  remote
+  container
+}
+
+// ============================================================================
+// PERMISSIONS - Tool Permission Context per Agent/Team
+// ============================================================================
+
+model AgentPermissionContext {
+  contextId         String            @id @default(uuid()) @map("context_id")
+  agentId           String            @map("agent_id")  // Can be team member or individual agent
+  teamId            String?           @map("team_id")
+
+  permissionMode    PermissionMode    @default(acceptEdits) @map("permission_mode")
+
+  // Tool restrictions
+  allowedTools      String[]          @default([]) @map("allowed_tools")
+  deniedTools       String[]          @default([]) @map("denied_tools")
+  allowedAgentTypes String[]          @default([]) @map("allowed_agent_types")
+  deniedAgentTypes  String[]          @default([]) @map("denied_agent_types")
+
+  // Working directories
+  additionalWorkingDirectories String[] @default([]) @map("additional_working_directories")
+
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  @@index([agentId])
+  @@index([teamId])
+  @@map("agent_permission_contexts")
+}
+
+enum PermissionMode {
+  default
+  acceptEdits
+  plan
+  bypassPermissions
+  auto
+}
