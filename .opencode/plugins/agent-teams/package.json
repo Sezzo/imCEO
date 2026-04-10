@@ -5,19 +5,29 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
-    "build": "tsc",
-    "test": "bun test"
+    "build": "tsc --noEmit",
+    "test": "bun test",
+    "lint": "tsc --noEmit && eslint .",
+    "format": "prettier --write ."
   },
   "dependencies": {
-    "@opencode-ai/plugin": "^0.x",
-    "zod": "^3.x"
+    "@opencode-ai/plugin": "latest",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/node": "^20.x",
-    "typescript": "^5.x"
+    "@types/node": "^20.11.24",
+    "typescript": "^5.3.3",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
+    "prettier": "^3.2.5"
   },
   "peerDependencies": {
-    "opencode-ai": ">=0.x"
+    "opencode-ai": ">=0.24.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
   },
   "keywords": [
     "opencode",
