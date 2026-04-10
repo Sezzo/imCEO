@@ -1,0 +1,36 @@
+{
+  "name": "opencode-agent-teams",
+  "version": "1.0.0",
+  "description": "Claude Code-style agent teams for OpenCode - Multi-agent collaboration with shared tasks and messaging",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^0.x",
+    "zod": "^3.x"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "typescript": "^5.x"
+  },
+  "peerDependencies": {
+    "opencode-ai": ">=0.x"
+  },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "agent-teams",
+    "multi-agent",
+    "collaboration",
+    "claude-code"
+  ],
+  "license": "MIT",
+  "author": "imCEO Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sezzo/imceo"
+  }
+}
